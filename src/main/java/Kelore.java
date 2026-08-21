@@ -36,6 +36,12 @@ public class Kelore {
                 System.out.println(INDENTATION + updateTaskStatus(taskList, input, true));
             } else if (input.startsWith("unmark ")) {
                 System.out.println(INDENTATION + updateTaskStatus(taskList, input, false));
+            } else if (input.equals("todo") || input.startsWith("todo ")) {
+                System.out.println(INDENTATION + taskList.addToDos(input));
+            } else if (input.equals("deadline") || input.startsWith("deadline ")) {
+                System.out.println(INDENTATION + taskList.addDeadline(input));
+            } else if (input.equals("event") || input.startsWith("event ")) {
+                System.out.println(INDENTATION + taskList.addEvent(input));
             } else {
                 System.out.println(INDENTATION + taskList.add(input));
             }
@@ -88,6 +94,51 @@ public class Kelore {
         }
     }
 
+    /** Represents a task that must be completed by a specified date or time. */
+    public static class Deadline extends Task {
+
+        protected String by;
+
+        public Deadline(String description, String by) {
+            super(description);
+            this.by = by;
+        }
+
+        @Override
+        public String toString() {
+            return "[D]" + super.toString() + " (by: " + by + ")";
+        }
+    }
+    
+    /** Represents a task without a date or time. */
+    public static class ToDos extends Task {
+        public ToDos(String description) {
+            super(description);
+        }
+
+        @Override
+        public String toString() {
+            return "[T]" + super.toString();
+        }
+    }
+
+    /** Represents a task that occurs between specified start and end times. */
+    public static class Event extends Task {
+        protected String from;
+        protected String to;
+
+        public Event(String description, String from, String to) {
+            super(description);
+            this.from = from;
+            this.to = to;
+        }
+
+        @Override
+        public String toString() {
+            return "[E]" + super.toString() + " (from: " + from + " to: " + to + ")";
+        }
+    }
+
     /** Stores tasks entered during the current program run. */
     public static class TaskList {
         private final Task[] tasks = new Task[100];
@@ -107,6 +158,82 @@ public class Kelore {
             tasks[taskCount] = task;
             taskCount++;
             return "added: " + task;
+        }
+
+        /** Parses and adds a deadline in the form {@code deadline DESCRIPTION /by DATE}. */
+        public String addDeadline(String input) {
+            String deadlineDetails = input.substring("deadline".length()).trim();
+            int bySeparatorIndex = deadlineDetails.indexOf("/by");
+            if (bySeparatorIndex < 0) {
+                return "Please specify the deadline using /by.";
+            }
+
+            String description = deadlineDetails.substring(0, bySeparatorIndex).trim();
+            String by = deadlineDetails.substring(bySeparatorIndex + "/by".length()).trim();
+            if (description.isEmpty()) {
+                return "The deadline description cannot be empty.";
+            }
+            if (by.isEmpty()) {
+                return "The deadline date/time cannot be empty.";
+            }
+            Task deadline = new Deadline(description, by);
+            return addTask(deadline);
+        }
+        
+        /** Parses and adds a to-do in the form {@code todo DESCRIPTION}. */
+        public String addToDos(String input) {
+            String description = input.substring("todo".length()).trim();
+
+            if (description.isEmpty()) {
+                return "The todo description cannot be empty.";
+            }
+            Task todoTask = new ToDos(description);
+            return addTask(todoTask);
+        }
+
+        /** Parses and adds an event in the form {@code event DESCRIPTION /from START /to END}. */
+        public String addEvent(String input) {
+            String eventDetails = input.substring("event".length()).trim();
+            int fromSeparatorIndex = eventDetails.indexOf("/from");
+            if (fromSeparatorIndex < 0) {
+                return "Please specify the event start using /from.";
+            }
+
+            int toSeparatorIndex = eventDetails.indexOf("/to", fromSeparatorIndex + "/from".length());
+            if (toSeparatorIndex < 0) {
+                return "Please specify the event end using /to.";
+            }
+
+            String description = eventDetails.substring(0, fromSeparatorIndex).trim();
+            String from = eventDetails.substring(
+                    fromSeparatorIndex + "/from".length(), toSeparatorIndex).trim();
+            String to = eventDetails.substring(toSeparatorIndex + "/to".length()).trim();
+            if (description.isEmpty()) {
+                return "The event description cannot be empty.";
+            }
+            if (from.isEmpty()) {
+                return "The event start date/time cannot be empty.";
+            }
+            if (to.isEmpty()) {
+                return "The event end date/time cannot be empty.";
+            }
+            Task event = new Event(description, from, to);
+            return addTask(event);
+        }
+
+        /** Stores a parsed task and creates the standard confirmation message. */
+        private String addTask(Task task) {
+            if (taskCount >= tasks.length) {
+                return "Task list is full.";
+            }
+
+            tasks[taskCount] = task;
+            taskCount++;
+            return "Got it. I've added this task:"
+                    + System.lineSeparator()
+                    + INDENTATION + "  " + task
+                    + System.lineSeparator()
+                    + INDENTATION + "Now you have " + taskCount + " tasks in the list.";
         }
 
         /** Marks the task at the given one-based position as completed. */
