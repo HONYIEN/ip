@@ -38,6 +38,13 @@ public class Kelore {
                 } catch (NumberFormatException e) {
                     System.out.println(INDENTATION + "Please provide a valid task number.");
                 }
+            } else if (input.startsWith("unmark ")) {
+                try {
+                    int taskNumber = Integer.parseInt(input.substring(7).trim());
+                    System.out.println(INDENTATION + TaskList.unmark(taskNumber));
+                } catch (NumberFormatException e) {
+                    System.out.println(INDENTATION + "Please provide a valid task number.");
+                }
             } else {
                 System.out.println(INDENTATION + TaskList.add(input));
             }
@@ -67,6 +74,11 @@ public class Kelore {
         /** Marks this task as completed. */
         public void markAsDone() {
             isDone = true;
+        }
+
+        /** Marks this task as not completed. */
+        public void markAsNotDone() {
+            isDone = false;
         }
 
         @Override
@@ -102,6 +114,20 @@ public class Kelore {
             Task task = tasks[taskIndex];
             task.markAsDone();
             return "Nice! I've marked this task as done:"
+                    + System.lineSeparator()
+                    + INDENTATION + "  " + task;
+        }
+
+        /** Marks the task at the given one-based position as not completed. */
+        public static String unmark(int taskNumber) {
+            int taskIndex = taskNumber - 1;
+            if (taskIndex < 0 || taskIndex >= taskCount) {
+                return "There is no task with that number.";
+            }
+
+            Task task = tasks[taskIndex];
+            task.markAsNotDone();
+            return "OK, I've marked this task as not done yet:"
                     + System.lineSeparator()
                     + INDENTATION + "  " + task;
         }
