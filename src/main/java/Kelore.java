@@ -43,9 +43,29 @@ public class Kelore {
         return input;
     }
 
+    /** Represents a task and whether it has been completed. */
+    public static class Task {
+        protected String description;
+        protected boolean isDone;
+
+        public Task(String description) {
+            this.description = description;
+            this.isDone = false;
+        }
+
+        public String getStatusIcon() {
+            return (isDone ? "X" : " "); // mark done task with X
+        }
+
+        @Override
+        public String toString() {
+            return "[" + getStatusIcon() + "] " + description;
+        }
+    }
+
     /** Stores tasks entered during the current program run. */
     public static class TaskList {
-        private static final String[] tasks = new String[100];
+        private static final Task[] tasks = new Task[100];
         private static int taskCount = 0;
 
         /** Adds a task and returns the message to show the user. */
@@ -54,9 +74,10 @@ public class Kelore {
                 return "Task list is full.";
             }
 
-            tasks[taskCount] = input;
+            Task task = new Task(input);
+            tasks[taskCount] = task;
             taskCount++;
-            return "added: " + input;
+            return "added: " + task;
         }
 
         /** Returns all stored tasks as a numbered, indented list. */
