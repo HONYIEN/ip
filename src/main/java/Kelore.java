@@ -31,6 +31,13 @@ public class Kelore {
 
             if ("list".equals(input)) {
                 System.out.print(TaskList.display());
+            } else if (input.startsWith("mark ")) {
+                try {
+                    int taskNumber = Integer.parseInt(input.substring(5).trim());
+                    System.out.println(INDENTATION + TaskList.mark(taskNumber));
+                } catch (NumberFormatException e) {
+                    System.out.println(INDENTATION + "Please provide a valid task number.");
+                }
             } else {
                 System.out.println(INDENTATION + TaskList.add(input));
             }
@@ -57,6 +64,11 @@ public class Kelore {
             return (isDone ? "X" : " "); // mark done task with X
         }
 
+        /** Marks this task as completed. */
+        public void markAsDone() {
+            isDone = true;
+        }
+
         @Override
         public String toString() {
             return "[" + getStatusIcon() + "] " + description;
@@ -80,13 +92,29 @@ public class Kelore {
             return "added: " + task;
         }
 
+        /** Marks the task at the given one-based position as completed. */
+        public static String mark(int taskNumber) {
+            int taskIndex = taskNumber - 1;
+            if (taskIndex < 0 || taskIndex >= taskCount) {
+                return "There is no task with that number.";
+            }
+
+            Task task = tasks[taskIndex];
+            task.markAsDone();
+            return "Nice! I've marked this task as done:"
+                    + System.lineSeparator()
+                    + INDENTATION + "  " + task;
+        }
+
         /** Returns all stored tasks as a numbered, indented list. */
         public static String display() {
-            StringBuilder output = new StringBuilder();
+            StringBuilder output = new StringBuilder(INDENTATION)
+                    .append("Here are the tasks in your list:")
+                    .append(System.lineSeparator());
             for (int i = 0; i < taskCount; i++) {
                 output.append(INDENTATION)
                         .append(i + 1)
-                        .append(". ")
+                        .append(".")
                         .append(tasks[i])
                         .append(System.lineSeparator());
             }
