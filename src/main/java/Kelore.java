@@ -5,6 +5,14 @@ public class Kelore {
     private static final String INDENTATION = "    ";
     private static final String DIVIDER = "_".repeat(60);
 
+    /** Represents an invalid command or command argument entered by a Kelore user. */
+    public static class KeloreInputError extends Exception {
+        /** Creates an input error with a message that explains how to correct the input. */
+        public KeloreInputError(String message) {
+            super(message);
+        }
+    }
+
     public static void main(String[] args) {
         String banner = " _  __ _____ _       ___  ____  _____\n"
                 + "| |/ /| ____| |     / _ \\|  _ \\| ____|\n"
@@ -30,20 +38,24 @@ public class Kelore {
                 break;
             }
 
-            if ("list".equals(input)) {
-                System.out.print(taskList.display());
-            } else if (input.startsWith("mark ")) {
-                System.out.println(INDENTATION + updateTaskStatus(taskList, input, true));
-            } else if (input.startsWith("unmark ")) {
-                System.out.println(INDENTATION + updateTaskStatus(taskList, input, false));
-            } else if (input.equals("todo") || input.startsWith("todo ")) {
-                System.out.println(INDENTATION + taskList.addToDos(input));
-            } else if (input.equals("deadline") || input.startsWith("deadline ")) {
-                System.out.println(INDENTATION + taskList.addDeadline(input));
-            } else if (input.equals("event") || input.startsWith("event ")) {
-                System.out.println(INDENTATION + taskList.addEvent(input));
-            } else {
-                System.out.println(INDENTATION + taskList.add(input));
+            try {
+                if ("list".equals(input)) {
+                    System.out.print(taskList.display());
+                } else if (input.equals("mark") || input.startsWith("mark ")) {
+                    System.out.println(INDENTATION + updateTaskStatus(taskList, input, true));
+                } else if (input.equals("unmark") || input.startsWith("unmark ")) {
+                    System.out.println(INDENTATION + updateTaskStatus(taskList, input, false));
+                } else if (input.equals("todo") || input.startsWith("todo ")) {
+                    System.out.println(INDENTATION + taskList.addToDos(input));
+                } else if (input.equals("deadline") || input.startsWith("deadline ")) {
+                    System.out.println(INDENTATION + taskList.addDeadline(input));
+                } else if (input.equals("event") || input.startsWith("event ")) {
+                    System.out.println(INDENTATION + taskList.addEvent(input));
+                } else {
+                    throw new KeloreInputError("I don't recognise that command.");
+                }
+            } catch (KeloreInputError e) {
+                System.out.println(INDENTATION + "Oops! " + e.getMessage());
             }
             System.out.println(INDENTATION + DIVIDER);
         }
@@ -51,12 +63,13 @@ public class Kelore {
     }
 
     /** Parses a task number and applies either the mark or unmark operation. */
-    private static String updateTaskStatus(TaskList taskList, String input, boolean markAsDone) {
+    private static String updateTaskStatus(TaskList taskList, String input, boolean markAsDone)
+            throws KeloreInputError {
         try {
             int taskNumber = Integer.parseInt(input.substring(input.indexOf(' ') + 1).trim());
             return markAsDone ? taskList.mark(taskNumber) : taskList.unmark(taskNumber);
         } catch (NumberFormatException e) {
-            return "Please provide a valid task number.";
+            throw new KeloreInputError("Please provide a valid task number after the command.");
         }
     }
 
@@ -145,13 +158,13 @@ public class Kelore {
         private int taskCount = 0;
 
         /** Adds a task and returns the message to show the user. */
-        public String add(String input) {
+        public String add(String input) throws KeloreInputError {
             if (input.isBlank()) {
-                return "The task description cannot be empty.";
+                throw new KeloreInputError("The task description cannot be empty.");
             }
 
             if (taskCount >= tasks.length) {
-                return "Task list is full.";
+                throw new KeloreInputError("The task list is full.");
             }
 
             Task task = new Task(input);
@@ -161,47 +174,47 @@ public class Kelore {
         }
 
         /** Parses and adds a deadline in the form {@code deadline DESCRIPTION /by DATE}. */
-        public String addDeadline(String input) {
+        public String addDeadline(String input) throws KeloreInputError {
             String deadlineDetails = input.substring("deadline".length()).trim();
             int bySeparatorIndex = deadlineDetails.indexOf("/by");
             if (bySeparatorIndex < 0) {
-                return "Please specify the deadline using /by.";
+                throw new KeloreInputError("Please specify the deadline using /by.");
             }
 
             String description = deadlineDetails.substring(0, bySeparatorIndex).trim();
             String by = deadlineDetails.substring(bySeparatorIndex + "/by".length()).trim();
             if (description.isEmpty()) {
-                return "The deadline description cannot be empty.";
+                throw new KeloreInputError("The deadline description cannot be empty.");
             }
             if (by.isEmpty()) {
-                return "The deadline date/time cannot be empty.";
+                throw new KeloreInputError("The deadline date/time cannot be empty.");
             }
             Task deadline = new Deadline(description, by);
             return addTask(deadline);
         }
         
         /** Parses and adds a to-do in the form {@code todo DESCRIPTION}. */
-        public String addToDos(String input) {
+        public String addToDos(String input) throws KeloreInputError {
             String description = input.substring("todo".length()).trim();
 
             if (description.isEmpty()) {
-                return "The todo description cannot be empty.";
+                throw new KeloreInputError("The todo description cannot be empty.");
             }
             Task todoTask = new ToDos(description);
             return addTask(todoTask);
         }
 
         /** Parses and adds an event in the form {@code event DESCRIPTION /from START /to END}. */
-        public String addEvent(String input) {
+        public String addEvent(String input) throws KeloreInputError {
             String eventDetails = input.substring("event".length()).trim();
             int fromSeparatorIndex = eventDetails.indexOf("/from");
             if (fromSeparatorIndex < 0) {
-                return "Please specify the event start using /from.";
+                throw new KeloreInputError("Please specify the event start using /from.");
             }
 
             int toSeparatorIndex = eventDetails.indexOf("/to", fromSeparatorIndex + "/from".length());
             if (toSeparatorIndex < 0) {
-                return "Please specify the event end using /to.";
+                throw new KeloreInputError("Please specify the event end using /to.");
             }
 
             String description = eventDetails.substring(0, fromSeparatorIndex).trim();
@@ -209,22 +222,22 @@ public class Kelore {
                     fromSeparatorIndex + "/from".length(), toSeparatorIndex).trim();
             String to = eventDetails.substring(toSeparatorIndex + "/to".length()).trim();
             if (description.isEmpty()) {
-                return "The event description cannot be empty.";
+                throw new KeloreInputError("The event description cannot be empty.");
             }
             if (from.isEmpty()) {
-                return "The event start date/time cannot be empty.";
+                throw new KeloreInputError("The event start date/time cannot be empty.");
             }
             if (to.isEmpty()) {
-                return "The event end date/time cannot be empty.";
+                throw new KeloreInputError("The event end date/time cannot be empty.");
             }
             Task event = new Event(description, from, to);
             return addTask(event);
         }
 
         /** Stores a parsed task and creates the standard confirmation message. */
-        private String addTask(Task task) {
+        private String addTask(Task task) throws KeloreInputError {
             if (taskCount >= tasks.length) {
-                return "Task list is full.";
+                throw new KeloreInputError("The task list is full.");
             }
 
             tasks[taskCount] = task;
@@ -237,10 +250,10 @@ public class Kelore {
         }
 
         /** Marks the task at the given one-based position as completed. */
-        public String mark(int taskNumber) {
+        public String mark(int taskNumber) throws KeloreInputError {
             int taskIndex = taskNumber - 1;
             if (!isValidTaskNumber(taskNumber)) {
-                return "There is no task with that number.";
+                throw new KeloreInputError("There is no task with that number.");
             }
 
             Task task = tasks[taskIndex];
@@ -251,10 +264,10 @@ public class Kelore {
         }
 
         /** Marks the task at the given one-based position as not completed. */
-        public String unmark(int taskNumber) {
+        public String unmark(int taskNumber) throws KeloreInputError {
             int taskIndex = taskNumber - 1;
             if (!isValidTaskNumber(taskNumber)) {
-                return "There is no task with that number.";
+                throw new KeloreInputError("There is no task with that number.");
             }
 
             Task task = tasks[taskIndex];
