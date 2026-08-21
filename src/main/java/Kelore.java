@@ -19,6 +19,7 @@ public class Kelore {
         System.out.println(INDENTATION + DIVIDER);
 
         Scanner scanner = new Scanner(System.in);
+        TaskList taskList = new TaskList();
         while (true) {
             String input = scanner.nextLine();
             System.out.println(INDENTATION + DIVIDER);
@@ -30,27 +31,27 @@ public class Kelore {
             }
 
             if ("list".equals(input)) {
-                System.out.print(TaskList.display());
+                System.out.print(taskList.display());
             } else if (input.startsWith("mark ")) {
-                try {
-                    int taskNumber = Integer.parseInt(input.substring(5).trim());
-                    System.out.println(INDENTATION + TaskList.mark(taskNumber));
-                } catch (NumberFormatException e) {
-                    System.out.println(INDENTATION + "Please provide a valid task number.");
-                }
+                System.out.println(INDENTATION + updateTaskStatus(taskList, input, true));
             } else if (input.startsWith("unmark ")) {
-                try {
-                    int taskNumber = Integer.parseInt(input.substring(7).trim());
-                    System.out.println(INDENTATION + TaskList.unmark(taskNumber));
-                } catch (NumberFormatException e) {
-                    System.out.println(INDENTATION + "Please provide a valid task number.");
-                }
+                System.out.println(INDENTATION + updateTaskStatus(taskList, input, false));
             } else {
-                System.out.println(INDENTATION + TaskList.add(input));
+                System.out.println(INDENTATION + taskList.add(input));
             }
             System.out.println(INDENTATION + DIVIDER);
         }
         scanner.close();
+    }
+
+    /** Parses a task number and applies either the mark or unmark operation. */
+    private static String updateTaskStatus(TaskList taskList, String input, boolean markAsDone) {
+        try {
+            int taskNumber = Integer.parseInt(input.substring(input.indexOf(' ') + 1).trim());
+            return markAsDone ? taskList.mark(taskNumber) : taskList.unmark(taskNumber);
+        } catch (NumberFormatException e) {
+            return "Please provide a valid task number.";
+        }
     }
 
     public static String echoString(String input) {
@@ -89,11 +90,15 @@ public class Kelore {
 
     /** Stores tasks entered during the current program run. */
     public static class TaskList {
-        private static final Task[] tasks = new Task[100];
-        private static int taskCount = 0;
+        private final Task[] tasks = new Task[100];
+        private int taskCount = 0;
 
         /** Adds a task and returns the message to show the user. */
-        public static String add(String input) {
+        public String add(String input) {
+            if (input.isBlank()) {
+                return "The task description cannot be empty.";
+            }
+
             if (taskCount >= tasks.length) {
                 return "Task list is full.";
             }
@@ -105,9 +110,9 @@ public class Kelore {
         }
 
         /** Marks the task at the given one-based position as completed. */
-        public static String mark(int taskNumber) {
+        public String mark(int taskNumber) {
             int taskIndex = taskNumber - 1;
-            if (taskIndex < 0 || taskIndex >= taskCount) {
+            if (!isValidTaskNumber(taskNumber)) {
                 return "There is no task with that number.";
             }
 
@@ -119,9 +124,9 @@ public class Kelore {
         }
 
         /** Marks the task at the given one-based position as not completed. */
-        public static String unmark(int taskNumber) {
+        public String unmark(int taskNumber) {
             int taskIndex = taskNumber - 1;
-            if (taskIndex < 0 || taskIndex >= taskCount) {
+            if (!isValidTaskNumber(taskNumber)) {
                 return "There is no task with that number.";
             }
 
@@ -132,8 +137,13 @@ public class Kelore {
                     + INDENTATION + "  " + task;
         }
 
+        /** Returns whether the one-based task number refers to a stored task. */
+        private boolean isValidTaskNumber(int taskNumber) {
+            return taskNumber >= 1 && taskNumber <= taskCount;
+        }
+
         /** Returns all stored tasks as a numbered, indented list. */
-        public static String display() {
+        public String display() {
             StringBuilder output = new StringBuilder(INDENTATION)
                     .append("Here are the tasks in your list:")
                     .append(System.lineSeparator());
