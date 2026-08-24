@@ -6,6 +6,39 @@ public class Kelore {
     private static final String INDENTATION = "    ";
     private static final String DIVIDER = "_".repeat(60);
 
+    /** Represents a command that Kelore can execute. */
+    public enum Command {
+        BYE("bye", false),
+        LIST("list", false),
+        MARK("mark", true),
+        UNMARK("unmark", true),
+        DELETE("delete", true),
+        TODO("todo", true),
+        DEADLINE("deadline", true),
+        EVENT("event", true);
+
+        private final String commandWord;
+        private final boolean acceptsArguments;
+
+        Command(String commandWord, boolean acceptsArguments) {
+            this.commandWord = commandWord;
+            this.acceptsArguments = acceptsArguments;
+        }
+
+        /** Returns the command represented by the user's full input. */
+        public static Command fromInput(String input) throws KeloreInputError {
+            for (Command command : values()) {
+                boolean isExactCommand = input.equals(command.commandWord);
+                boolean hasArguments = command.acceptsArguments
+                        && input.startsWith(command.commandWord + " ");
+                if (isExactCommand || hasArguments) {
+                    return command;
+                }
+            }
+            throw new KeloreInputError("I don't recognise that command.");
+        }
+    }
+
     /** Represents an invalid command or command argument entered by a Kelore user. */
     public static class KeloreInputError extends Exception {
         /** Creates an input error with a message that explains how to correct the input. */
@@ -33,36 +66,43 @@ public class Kelore {
             String input = scanner.nextLine();
             System.out.println(INDENTATION + DIVIDER);
 
-            if ("bye".equals(input)) {
-                System.out.println(INDENTATION + "Bye. Hope to see you again soon!");
-                System.out.println(INDENTATION + DIVIDER);
-                break;
-            }
-
             try {
-                if ("list".equals(input)) {
+                Command command = Command.fromInput(input);
+                switch (command) {
+                case BYE:
+                    System.out.println(INDENTATION + "Bye. Hope to see you again soon!");
+                    System.out.println(INDENTATION + DIVIDER);
+                    scanner.close();
+                    return;
+                case LIST:
                     System.out.print(taskList.display());
-                } else if (input.equals("mark") || input.startsWith("mark ")) {
+                    break;
+                case MARK:
                     System.out.println(INDENTATION + updateTaskStatus(taskList, input, true));
-                } else if (input.equals("unmark") || input.startsWith("unmark ")) {
+                    break;
+                case UNMARK:
                     System.out.println(INDENTATION + updateTaskStatus(taskList, input, false));
-                } else if (input.equals("delete") || input.startsWith("delete ")) {
+                    break;
+                case DELETE:
                     System.out.println(INDENTATION + deleteTask(taskList, input));
-                } else if (input.equals("todo") || input.startsWith("todo ")) {
+                    break;
+                case TODO:
                     System.out.println(INDENTATION + taskList.addToDos(input));
-                } else if (input.equals("deadline") || input.startsWith("deadline ")) {
+                    break;
+                case DEADLINE:
                     System.out.println(INDENTATION + taskList.addDeadline(input));
-                } else if (input.equals("event") || input.startsWith("event ")) {
+                    break;
+                case EVENT:
                     System.out.println(INDENTATION + taskList.addEvent(input));
-                } else {
-                    throw new KeloreInputError("I don't recognise that command.");
+                    break;
+                default:
+                    throw new AssertionError("Unhandled command: " + command);
                 }
             } catch (KeloreInputError e) {
                 System.out.println(INDENTATION + "Oops! " + e.getMessage());
             }
             System.out.println(INDENTATION + DIVIDER);
         }
-        scanner.close();
     }
 
     /** Parses a task number and applies either the mark or unmark operation. */
