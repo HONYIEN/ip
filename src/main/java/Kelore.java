@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.Scanner;
 
 /** Runs the Kelore task-tracking chatbot. */
@@ -45,6 +46,8 @@ public class Kelore {
                     System.out.println(INDENTATION + updateTaskStatus(taskList, input, true));
                 } else if (input.equals("unmark") || input.startsWith("unmark ")) {
                     System.out.println(INDENTATION + updateTaskStatus(taskList, input, false));
+                } else if (input.equals("delete") || input.startsWith("delete ")) {
+                    System.out.println(INDENTATION + deleteTask(taskList, input));
                 } else if (input.equals("todo") || input.startsWith("todo ")) {
                     System.out.println(INDENTATION + taskList.addToDos(input));
                 } else if (input.equals("deadline") || input.startsWith("deadline ")) {
@@ -65,12 +68,23 @@ public class Kelore {
     /** Parses a task number and applies either the mark or unmark operation. */
     private static String updateTaskStatus(TaskList taskList, String input, boolean markAsDone)
             throws KeloreInputError {
+        int taskNumber = parseTaskNumber(input);
+        return markAsDone ? taskList.mark(taskNumber) : taskList.unmark(taskNumber);
+    }
+
+    /** Parses the one-based task number following a command. */
+    private static int parseTaskNumber(String input) throws KeloreInputError {
         try {
-            int taskNumber = Integer.parseInt(input.substring(input.indexOf(' ') + 1).trim());
-            return markAsDone ? taskList.mark(taskNumber) : taskList.unmark(taskNumber);
+            return Integer.parseInt(input.substring(input.indexOf(' ') + 1).trim());
         } catch (NumberFormatException e) {
             throw new KeloreInputError("Please provide a valid task number after the command.");
         }
+    }
+
+    /** Parses a task number and removes the corresponding task. */
+    private static String deleteTask(TaskList taskList, String input) throws KeloreInputError {
+        int taskNumber = parseTaskNumber(input);
+        return taskList.delete(taskNumber);
     }
 
     public static String echoString(String input) {
@@ -154,8 +168,7 @@ public class Kelore {
 
     /** Stores tasks entered during the current program run. */
     public static class TaskList {
-        private final Task[] tasks = new Task[100];
-        private int taskCount = 0;
+        private final ArrayList<Task> tasks = new ArrayList<>();
 
         /** Adds a task and returns the message to show the user. */
         public String add(String input) throws KeloreInputError {
@@ -163,13 +176,8 @@ public class Kelore {
                 throw new KeloreInputError("The task description cannot be empty.");
             }
 
-            if (taskCount >= tasks.length) {
-                throw new KeloreInputError("The task list is full.");
-            }
-
             Task task = new Task(input);
-            tasks[taskCount] = task;
-            taskCount++;
+            tasks.add(task);
             return "added: " + task;
         }
 
@@ -235,18 +243,13 @@ public class Kelore {
         }
 
         /** Stores a parsed task and creates the standard confirmation message. */
-        private String addTask(Task task) throws KeloreInputError {
-            if (taskCount >= tasks.length) {
-                throw new KeloreInputError("The task list is full.");
-            }
-
-            tasks[taskCount] = task;
-            taskCount++;
+        private String addTask(Task task) {
+            tasks.add(task);
             return "Got it. I've added this task:"
                     + System.lineSeparator()
                     + INDENTATION + "  " + task
                     + System.lineSeparator()
-                    + INDENTATION + "Now you have " + taskCount + " tasks in the list.";
+                    + INDENTATION + "Now you have " + tasks.size() + " tasks in the list.";
         }
 
         /** Marks the task at the given one-based position as completed. */
@@ -256,7 +259,7 @@ public class Kelore {
                 throw new KeloreInputError("There is no task with that number.");
             }
 
-            Task task = tasks[taskIndex];
+            Task task = tasks.get(taskIndex);
             task.markAsDone();
             return "Nice! I've marked this task as done:"
                     + System.lineSeparator()
@@ -270,16 +273,30 @@ public class Kelore {
                 throw new KeloreInputError("There is no task with that number.");
             }
 
-            Task task = tasks[taskIndex];
+            Task task = tasks.get(taskIndex);
             task.markAsNotDone();
             return "OK, I've marked this task as not done yet:"
                     + System.lineSeparator()
                     + INDENTATION + "  " + task;
         }
 
+        /** Removes the task at the given one-based position. */
+        public String delete(int taskNumber) throws KeloreInputError {
+            if (!isValidTaskNumber(taskNumber)) {
+                throw new KeloreInputError("There is no task with that number.");
+            }
+
+            Task removedTask = tasks.remove(taskNumber - 1);
+            return "Noted. I've removed this task:"
+                    + System.lineSeparator()
+                    + INDENTATION + "  " + removedTask
+                    + System.lineSeparator()
+                    + INDENTATION + "Now you have " + tasks.size() + " tasks in the list.";
+        }
+
         /** Returns whether the one-based task number refers to a stored task. */
         private boolean isValidTaskNumber(int taskNumber) {
-            return taskNumber >= 1 && taskNumber <= taskCount;
+            return taskNumber >= 1 && taskNumber <= tasks.size();
         }
 
         /** Returns all stored tasks as a numbered, indented list. */
@@ -287,11 +304,11 @@ public class Kelore {
             StringBuilder output = new StringBuilder(INDENTATION)
                     .append("Here are the tasks in your list:")
                     .append(System.lineSeparator());
-            for (int i = 0; i < taskCount; i++) {
+            for (int i = 0; i < tasks.size(); i++) {
                 output.append(INDENTATION)
                         .append(i + 1)
                         .append(".")
-                        .append(tasks[i])
+                        .append(tasks.get(i))
                         .append(System.lineSeparator());
             }
             return output.toString();
