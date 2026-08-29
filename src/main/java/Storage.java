@@ -1,6 +1,8 @@
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -58,11 +60,16 @@ public class Storage {
             break;
         case "D":
             requireFieldCount(fields, 4, lineNumber);
-            task = new Kelore.Deadline(fields[2], fields[3]);
+            task = new Kelore.Deadline(fields[2], parseDateTime(fields[3], lineNumber));
             break;
         case "E":
             requireFieldCount(fields, 5, lineNumber);
-            task = new Kelore.Event(fields[2], fields[3], fields[4]);
+            LocalDateTime from = parseDateTime(fields[3], lineNumber);
+            LocalDateTime to = parseDateTime(fields[4], lineNumber);
+            if (to.isBefore(from)) {
+                throw corruptedFileError(lineNumber);
+            }
+            task = new Kelore.Event(fields[2], from, to);
             break;
         default:
             throw corruptedFileError(lineNumber);
@@ -74,6 +81,15 @@ public class Storage {
             throw corruptedFileError(lineNumber);
         }
         return task;
+    }
+
+    /** Parses an ISO date-time stored in the data file. */
+    private LocalDateTime parseDateTime(String value, int lineNumber) throws IOException {
+        try {
+            return LocalDateTime.parse(value);
+        } catch (DateTimeParseException e) {
+            throw corruptedFileError(lineNumber);
+        }
     }
 
     /** Ensures a stored task contains exactly the fields required by its task type. */
