@@ -21,40 +21,6 @@ public class Kelore {
     private static final DateTimeFormatter DISPLAY_DATE_FORMAT = DateTimeFormatter
             .ofPattern("MMM d uuuu", Locale.ENGLISH);
 
-    /** Represents a command that Kelore can execute. */
-    public enum Command {
-        BYE("bye", false),
-        LIST("list", false),
-        MARK("mark", true),
-        UNMARK("unmark", true),
-        DELETE("delete", true),
-        TODO("todo", true),
-        DEADLINE("deadline", true),
-        EVENT("event", true),
-        ON("on", true);
-
-        private final String commandWord;
-        private final boolean acceptsArguments;
-
-        Command(String commandWord, boolean acceptsArguments) {
-            this.commandWord = commandWord;
-            this.acceptsArguments = acceptsArguments;
-        }
-
-        /** Returns the command represented by the user's full input. */
-        public static Command fromInput(String input) throws KeloreInputError {
-            for (Command command : values()) {
-                boolean isExactCommand = input.equals(command.commandWord);
-                boolean hasArguments = command.acceptsArguments
-                        && input.startsWith(command.commandWord + " ");
-                if (isExactCommand || hasArguments) {
-                    return command;
-                }
-            }
-            throw new KeloreInputError("I don't recognise that command.");
-        }
-    }
-
     /** Represents an invalid command or command argument entered by a Kelore user. */
     public static class KeloreInputError extends Exception {
         /** Creates an input error with a message that explains how to correct the input. */
@@ -65,6 +31,7 @@ public class Kelore {
 
     public static void main(String[] args) {
         Ui ui = new Ui();
+        Parser parser = new Parser();
         ui.showWelcome();
         Storage storage = new Storage(DATA_FILE_PATH);
         TaskList taskList;
@@ -80,7 +47,7 @@ public class Kelore {
             ui.showDivider();
 
             try {
-                Command command = Command.fromInput(input);
+                Parser.Command command = parser.parseCommand(input);
                 switch (command) {
                 case BYE:
                     ui.showGoodbye();
@@ -90,15 +57,15 @@ public class Kelore {
                     ui.showMessage(taskList.display());
                     break;
                 case MARK:
-                    ui.showIndentedLine(updateTaskStatus(taskList, input, true));
+                    ui.showIndentedLine(taskList.mark(parser.parseTaskNumber(input)));
                     storage.save(taskList);
                     break;
                 case UNMARK:
-                    ui.showIndentedLine(updateTaskStatus(taskList, input, false));
+                    ui.showIndentedLine(taskList.unmark(parser.parseTaskNumber(input)));
                     storage.save(taskList);
                     break;
                 case DELETE:
-                    ui.showIndentedLine(deleteTask(taskList, input));
+                    ui.showIndentedLine(taskList.delete(parser.parseTaskNumber(input)));
                     storage.save(taskList);
                     break;
                 case TODO:
@@ -127,28 +94,6 @@ public class Kelore {
             }
             ui.showDivider();
         }
-    }
-
-    /** Parses a task number and applies either the mark or unmark operation. */
-    private static String updateTaskStatus(TaskList taskList, String input, boolean markAsDone)
-            throws KeloreInputError {
-        int taskNumber = parseTaskNumber(input);
-        return markAsDone ? taskList.mark(taskNumber) : taskList.unmark(taskNumber);
-    }
-
-    /** Parses the one-based task number following a command. */
-    private static int parseTaskNumber(String input) throws KeloreInputError {
-        try {
-            return Integer.parseInt(input.substring(input.indexOf(' ') + 1).trim());
-        } catch (NumberFormatException e) {
-            throw new KeloreInputError("Please provide a valid task number after the command.");
-        }
-    }
-
-    /** Parses a task number and removes the corresponding task. */
-    private static String deleteTask(TaskList taskList, String input) throws KeloreInputError {
-        int taskNumber = parseTaskNumber(input);
-        return taskList.delete(taskNumber);
     }
 
     public static String echoString(String input) {
