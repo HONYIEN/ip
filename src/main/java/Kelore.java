@@ -7,12 +7,10 @@ import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
 import java.util.ArrayList;
 import java.util.Locale;
-import java.util.Scanner;
 
 /** Runs the Kelore task-tracking chatbot. */
 public class Kelore {
     private static final String INDENTATION = "    ";
-    private static final String DIVIDER = "_".repeat(60);
     private static final Path DATA_FILE_PATH = Path.of("data", "kelore.txt");
     private static final DateTimeFormatter INPUT_DATE_TIME_FORMAT = DateTimeFormatter
             .ofPattern("d/M/uuuu HHmm").withResolverStyle(ResolverStyle.STRICT);
@@ -66,80 +64,68 @@ public class Kelore {
     }
 
     public static void main(String[] args) {
-        String banner = " _  __ _____ _       ___  ____  _____\n"
-                + "| |/ /| ____| |     / _ \\|  _ \\| ____|\n"
-                + "| ' / |  _| | |    | | | | |_) |  _|\n"
-                + "| . \\ | |___| |___ | |_| |  _ <| |___\n"
-                + "|_|\\_\\|_____|_____| \\___/|_| \\_\\_____|";
-
-        System.out.println(INDENTATION + DIVIDER);
-        System.out.println(INDENTATION + banner.replace("\n", "\n" + INDENTATION));
-        System.out.println(INDENTATION + "Hello! I'm Kelore.");
-        System.out.println(INDENTATION + "What can I do for you?");
-        System.out.println(INDENTATION + DIVIDER);
-
-        Scanner scanner = new Scanner(System.in);
+        Ui ui = new Ui();
+        ui.showWelcome();
         Storage storage = new Storage(DATA_FILE_PATH);
         TaskList taskList;
         try {
             taskList = storage.load();
         } catch (IOException e) {
-            System.out.println(INDENTATION + "Oops! I could not load your saved tasks.");
-            System.out.println(INDENTATION + e.getMessage());
+            ui.showError("I could not load your saved tasks.");
+            ui.showIndentedLine(e.getMessage());
             taskList = new TaskList();
         }
         while (true) {
-            String input = scanner.nextLine();
-            System.out.println(INDENTATION + DIVIDER);
+            String input = ui.readCommand();
+            ui.showDivider();
 
             try {
                 Command command = Command.fromInput(input);
                 switch (command) {
                 case BYE:
-                    System.out.println(INDENTATION + "Bye. Hope to see you again soon!");
-                    System.out.println(INDENTATION + DIVIDER);
-                    scanner.close();
+                    ui.showGoodbye();
+                    ui.close();
                     return;
                 case LIST:
-                    System.out.print(taskList.display());
+                    ui.showMessage(taskList.display());
                     break;
                 case MARK:
-                    System.out.println(INDENTATION + updateTaskStatus(taskList, input, true));
+                    ui.showIndentedLine(updateTaskStatus(taskList, input, true));
                     storage.save(taskList);
                     break;
                 case UNMARK:
-                    System.out.println(INDENTATION + updateTaskStatus(taskList, input, false));
+                    ui.showIndentedLine(updateTaskStatus(taskList, input, false));
                     storage.save(taskList);
                     break;
                 case DELETE:
-                    System.out.println(INDENTATION + deleteTask(taskList, input));
+                    ui.showIndentedLine(deleteTask(taskList, input));
                     storage.save(taskList);
                     break;
                 case TODO:
-                    System.out.println(INDENTATION + taskList.addToDos(input));
+                    ui.showIndentedLine(taskList.addToDos(input));
                     storage.save(taskList);
                     break;
                 case DEADLINE:
-                    System.out.println(INDENTATION + taskList.addDeadline(input));
+                    ui.showIndentedLine(taskList.addDeadline(input));
                     storage.save(taskList);
                     break;
                 case EVENT:
-                    System.out.println(INDENTATION + taskList.addEvent(input));
+                    ui.showIndentedLine(taskList.addEvent(input));
                     storage.save(taskList);
                     break;
                 case ON:
-                    System.out.print(taskList.displayTasksOn(input));
+                    ui.showMessage(taskList.displayTasksOn(input));
                     break;
                 default:
                     throw new AssertionError("Unhandled command: " + command);
                 }
             } catch (KeloreInputError e) {
-                System.out.println(INDENTATION + "Oops! " + e.getMessage());
+                ui.showError(e.getMessage());
             } catch (IOException e) {
-                System.out.println(INDENTATION + "Oops! I could not save your tasks.");
-                System.out.println(INDENTATION + e.getMessage());
+                ui.showError("I could not save your tasks.");
+                ui.showIndentedLine(e.getMessage());
             }
-            System.out.println(INDENTATION + DIVIDER);
+            ui.showDivider();
         }
     }
 
