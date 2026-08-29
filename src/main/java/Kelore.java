@@ -1,6 +1,12 @@
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.Scanner;
 
 /** Runs the Kelore task-tracking chatbot. */
@@ -8,6 +14,14 @@ public class Kelore {
     private static final String INDENTATION = "    ";
     private static final String DIVIDER = "_".repeat(60);
     private static final Path DATA_FILE_PATH = Path.of("data", "kelore.txt");
+    private static final DateTimeFormatter INPUT_DATE_TIME_FORMAT = DateTimeFormatter
+            .ofPattern("d/M/uuuu HHmm").withResolverStyle(ResolverStyle.STRICT);
+    private static final DateTimeFormatter INPUT_DATE_FORMAT = DateTimeFormatter
+            .ofPattern("d/M/uuuu").withResolverStyle(ResolverStyle.STRICT);
+    private static final DateTimeFormatter DISPLAY_DATE_TIME_FORMAT = DateTimeFormatter
+            .ofPattern("MMM d uuuu, h:mm a", Locale.ENGLISH);
+    private static final DateTimeFormatter DISPLAY_DATE_FORMAT = DateTimeFormatter
+            .ofPattern("MMM d uuuu", Locale.ENGLISH);
 
     /** Represents a command that Kelore can execute. */
     public enum Command {
@@ -18,7 +32,8 @@ public class Kelore {
         DELETE("delete", true),
         TODO("todo", true),
         DEADLINE("deadline", true),
-        EVENT("event", true);
+        EVENT("event", true),
+        ON("on", true);
 
         private final String commandWord;
         private final boolean acceptsArguments;
@@ -112,6 +127,9 @@ public class Kelore {
                     System.out.println(INDENTATION + taskList.addEvent(input));
                     storage.save(taskList);
                     break;
+                case ON:
+                    System.out.print(taskList.displayTasksOn(input));
+                    break;
                 default:
                     throw new AssertionError("Unhandled command: " + command);
                 }
@@ -175,6 +193,11 @@ public class Kelore {
             return Storage.joinFields("T", getStorageStatus(), description);
         }
 
+        /** Returns whether this task occurs on the specified calendar date. */
+        public boolean occursOn(LocalDate date) {
+            return false;
+        }
+
         /** Marks this task as completed. */
         public void markAsDone() {
             isDone = true;
@@ -194,21 +217,27 @@ public class Kelore {
     /** Represents a task that must be completed by a specified date or time. */
     public static class Deadline extends Task {
 
-        protected String by;
+        protected LocalDateTime by;
 
-        public Deadline(String description, String by) {
+        public Deadline(String description, LocalDateTime by) {
             super(description);
             this.by = by;
         }
 
         @Override
         public String toString() {
-            return "[D]" + super.toString() + " (by: " + by + ")";
+            return "[D]" + super.toString() + " (by: "
+                    + by.format(DISPLAY_DATE_TIME_FORMAT) + ")";
         }
 
         @Override
         public String toStorageString() {
-            return Storage.joinFields("D", getStorageStatus(), description, by);
+            return Storage.joinFields("D", getStorageStatus(), description, by.toString());
+        }
+
+        @Override
+        public boolean occursOn(LocalDate date) {
+            return by.toLocalDate().equals(date);
         }
     }
     
@@ -231,10 +260,10 @@ public class Kelore {
 
     /** Represents a task that occurs between specified start and end times. */
     public static class Event extends Task {
-        protected String from;
-        protected String to;
+        protected LocalDateTime from;
+        protected LocalDateTime to;
 
-        public Event(String description, String from, String to) {
+        public Event(String description, LocalDateTime from, LocalDateTime to) {
             super(description);
             this.from = from;
             this.to = to;
@@ -242,12 +271,22 @@ public class Kelore {
 
         @Override
         public String toString() {
-            return "[E]" + super.toString() + " (from: " + from + " to: " + to + ")";
+            return "[E]" + super.toString() + " (from: "
+                    + from.format(DISPLAY_DATE_TIME_FORMAT) + " to: "
+                    + to.format(DISPLAY_DATE_TIME_FORMAT) + ")";
         }
 
         @Override
         public String toStorageString() {
-            return Storage.joinFields("E", getStorageStatus(), description, from, to);
+            return Storage.joinFields("E", getStorageStatus(), description,
+                    from.toString(), to.toString());
+        }
+
+        @Override
+        public boolean occursOn(LocalDate date) {
+            LocalDate startDate = from.toLocalDate();
+            LocalDate endDate = to.toLocalDate();
+            return !date.isBefore(startDate) && !date.isAfter(endDate);
         }
     }
 
@@ -294,14 +333,15 @@ public class Kelore {
             }
 
             String description = deadlineDetails.substring(0, bySeparatorIndex).trim();
-            String by = deadlineDetails.substring(bySeparatorIndex + "/by".length()).trim();
+            String byText = deadlineDetails.substring(bySeparatorIndex + "/by".length()).trim();
             if (description.isEmpty()) {
                 throw new KeloreInputError("The deadline description cannot be empty.");
             }
-            if (by.isEmpty()) {
+            if (byText.isEmpty()) {
                 throw new KeloreInputError("The deadline date/time cannot be empty.");
             }
-            ensureFieldsCanBeStored(description, by);
+            ensureFieldsCanBeStored(description);
+            LocalDateTime by = parseDateTime(byText);
             Task deadline = new Deadline(description, by);
             return addTask(deadline);
         }
@@ -332,21 +372,71 @@ public class Kelore {
             }
 
             String description = eventDetails.substring(0, fromSeparatorIndex).trim();
-            String from = eventDetails.substring(
+            String fromText = eventDetails.substring(
                     fromSeparatorIndex + "/from".length(), toSeparatorIndex).trim();
-            String to = eventDetails.substring(toSeparatorIndex + "/to".length()).trim();
+            String toText = eventDetails.substring(toSeparatorIndex + "/to".length()).trim();
             if (description.isEmpty()) {
                 throw new KeloreInputError("The event description cannot be empty.");
             }
-            if (from.isEmpty()) {
+            if (fromText.isEmpty()) {
                 throw new KeloreInputError("The event start date/time cannot be empty.");
             }
-            if (to.isEmpty()) {
+            if (toText.isEmpty()) {
                 throw new KeloreInputError("The event end date/time cannot be empty.");
             }
-            ensureFieldsCanBeStored(description, from, to);
+            ensureFieldsCanBeStored(description);
+            LocalDateTime from = parseDateTime(fromText);
+            LocalDateTime to = parseDateTime(toText);
+            if (to.isBefore(from)) {
+                throw new KeloreInputError(
+                        "The event end date/time cannot be before its start date/time.");
+            }
             Task event = new Event(description, from, to);
             return addTask(event);
+        }
+
+        /** Parses the date and time format accepted by deadline and event commands. */
+        private LocalDateTime parseDateTime(String dateTimeText) throws KeloreInputError {
+            try {
+                return LocalDateTime.parse(dateTimeText, INPUT_DATE_TIME_FORMAT);
+            } catch (DateTimeParseException e) {
+                throw new KeloreInputError(
+                        "Please use a valid date and time in the format d/M/yyyy HHmm.");
+            }
+        }
+
+        /** Lists deadlines and events occurring on the date in {@code on d/M/yyyy}. */
+        public String displayTasksOn(String input) throws KeloreInputError {
+            String dateText = input.substring("on".length()).trim();
+            LocalDate date;
+            try {
+                date = LocalDate.parse(dateText, INPUT_DATE_FORMAT);
+            } catch (DateTimeParseException e) {
+                throw new KeloreInputError("Please use a valid date in the format d/M/yyyy.");
+            }
+
+            StringBuilder output = new StringBuilder(INDENTATION)
+                    .append("Here are the deadlines and events on ")
+                    .append(date.format(DISPLAY_DATE_FORMAT))
+                    .append(":")
+                    .append(System.lineSeparator());
+            int matchNumber = 1;
+            for (Task task : tasks) {
+                if (task.occursOn(date)) {
+                    output.append(INDENTATION)
+                            .append(matchNumber)
+                            .append(".")
+                            .append(task)
+                            .append(System.lineSeparator());
+                    matchNumber++;
+                }
+            }
+            if (matchNumber == 1) {
+                output.append(INDENTATION)
+                        .append("No matching tasks.")
+                        .append(System.lineSeparator());
+            }
+            return output.toString();
         }
 
         /** Prevents task text from being confused with separators in the save file. */
