@@ -7,12 +7,10 @@ import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
 import java.util.ArrayList;
 import java.util.Locale;
-import java.util.Scanner;
 
 /** Runs the Kelore task-tracking chatbot. */
 public class Kelore {
     private static final String INDENTATION = "    ";
-    private static final String DIVIDER = "_".repeat(60);
     private static final Path DATA_FILE_PATH = Path.of("data", "kelore.txt");
     private static final DateTimeFormatter INPUT_DATE_TIME_FORMAT = DateTimeFormatter
             .ofPattern("d/M/uuuu HHmm").withResolverStyle(ResolverStyle.STRICT);
@@ -23,40 +21,6 @@ public class Kelore {
     private static final DateTimeFormatter DISPLAY_DATE_FORMAT = DateTimeFormatter
             .ofPattern("MMM d uuuu", Locale.ENGLISH);
 
-    /** Represents a command that Kelore can execute. */
-    public enum Command {
-        BYE("bye", false),
-        LIST("list", false),
-        MARK("mark", true),
-        UNMARK("unmark", true),
-        DELETE("delete", true),
-        TODO("todo", true),
-        DEADLINE("deadline", true),
-        EVENT("event", true),
-        ON("on", true);
-
-        private final String commandWord;
-        private final boolean acceptsArguments;
-
-        Command(String commandWord, boolean acceptsArguments) {
-            this.commandWord = commandWord;
-            this.acceptsArguments = acceptsArguments;
-        }
-
-        /** Returns the command represented by the user's full input. */
-        public static Command fromInput(String input) throws KeloreInputError {
-            for (Command command : values()) {
-                boolean isExactCommand = input.equals(command.commandWord);
-                boolean hasArguments = command.acceptsArguments
-                        && input.startsWith(command.commandWord + " ");
-                if (isExactCommand || hasArguments) {
-                    return command;
-                }
-            }
-            throw new KeloreInputError("I don't recognise that command.");
-        }
-    }
-
     /** Represents an invalid command or command argument entered by a Kelore user. */
     public static class KeloreInputError extends Exception {
         /** Creates an input error with a message that explains how to correct the input. */
@@ -66,103 +30,70 @@ public class Kelore {
     }
 
     public static void main(String[] args) {
-        String banner = " _  __ _____ _       ___  ____  _____\n"
-                + "| |/ /| ____| |     / _ \\|  _ \\| ____|\n"
-                + "| ' / |  _| | |    | | | | |_) |  _|\n"
-                + "| . \\ | |___| |___ | |_| |  _ <| |___\n"
-                + "|_|\\_\\|_____|_____| \\___/|_| \\_\\_____|";
-
-        System.out.println(INDENTATION + DIVIDER);
-        System.out.println(INDENTATION + banner.replace("\n", "\n" + INDENTATION));
-        System.out.println(INDENTATION + "Hello! I'm Kelore.");
-        System.out.println(INDENTATION + "What can I do for you?");
-        System.out.println(INDENTATION + DIVIDER);
-
-        Scanner scanner = new Scanner(System.in);
+        Ui ui = new Ui();
+        Parser parser = new Parser();
+        ui.showWelcome();
         Storage storage = new Storage(DATA_FILE_PATH);
         TaskList taskList;
         try {
             taskList = storage.load();
         } catch (IOException e) {
-            System.out.println(INDENTATION + "Oops! I could not load your saved tasks.");
-            System.out.println(INDENTATION + e.getMessage());
+            ui.showError("I could not load your saved tasks.");
+            ui.showIndentedLine(e.getMessage());
             taskList = new TaskList();
         }
         while (true) {
-            String input = scanner.nextLine();
-            System.out.println(INDENTATION + DIVIDER);
+            String input = ui.readCommand();
+            ui.showDivider();
 
             try {
-                Command command = Command.fromInput(input);
+                Parser.Command command = parser.parseCommand(input);
                 switch (command) {
                 case BYE:
-                    System.out.println(INDENTATION + "Bye. Hope to see you again soon!");
-                    System.out.println(INDENTATION + DIVIDER);
-                    scanner.close();
+                    ui.showGoodbye();
+                    ui.close();
                     return;
                 case LIST:
-                    System.out.print(taskList.display());
+                    ui.showMessage(taskList.display());
                     break;
                 case MARK:
-                    System.out.println(INDENTATION + updateTaskStatus(taskList, input, true));
+                    ui.showIndentedLine(taskList.mark(parser.parseTaskNumber(input)));
                     storage.save(taskList);
                     break;
                 case UNMARK:
-                    System.out.println(INDENTATION + updateTaskStatus(taskList, input, false));
+                    ui.showIndentedLine(taskList.unmark(parser.parseTaskNumber(input)));
                     storage.save(taskList);
                     break;
                 case DELETE:
-                    System.out.println(INDENTATION + deleteTask(taskList, input));
+                    ui.showIndentedLine(taskList.delete(parser.parseTaskNumber(input)));
                     storage.save(taskList);
                     break;
                 case TODO:
-                    System.out.println(INDENTATION + taskList.addToDos(input));
+                    ui.showIndentedLine(taskList.addToDos(input));
                     storage.save(taskList);
                     break;
                 case DEADLINE:
-                    System.out.println(INDENTATION + taskList.addDeadline(input));
+                    ui.showIndentedLine(taskList.addDeadline(input));
                     storage.save(taskList);
                     break;
                 case EVENT:
-                    System.out.println(INDENTATION + taskList.addEvent(input));
+                    ui.showIndentedLine(taskList.addEvent(input));
                     storage.save(taskList);
                     break;
                 case ON:
-                    System.out.print(taskList.displayTasksOn(input));
+                    ui.showMessage(taskList.displayTasksOn(input));
                     break;
                 default:
                     throw new AssertionError("Unhandled command: " + command);
                 }
             } catch (KeloreInputError e) {
-                System.out.println(INDENTATION + "Oops! " + e.getMessage());
+                ui.showError(e.getMessage());
             } catch (IOException e) {
-                System.out.println(INDENTATION + "Oops! I could not save your tasks.");
-                System.out.println(INDENTATION + e.getMessage());
+                ui.showError("I could not save your tasks.");
+                ui.showIndentedLine(e.getMessage());
             }
-            System.out.println(INDENTATION + DIVIDER);
+            ui.showDivider();
         }
-    }
-
-    /** Parses a task number and applies either the mark or unmark operation. */
-    private static String updateTaskStatus(TaskList taskList, String input, boolean markAsDone)
-            throws KeloreInputError {
-        int taskNumber = parseTaskNumber(input);
-        return markAsDone ? taskList.mark(taskNumber) : taskList.unmark(taskNumber);
-    }
-
-    /** Parses the one-based task number following a command. */
-    private static int parseTaskNumber(String input) throws KeloreInputError {
-        try {
-            return Integer.parseInt(input.substring(input.indexOf(' ') + 1).trim());
-        } catch (NumberFormatException e) {
-            throw new KeloreInputError("Please provide a valid task number after the command.");
-        }
-    }
-
-    /** Parses a task number and removes the corresponding task. */
-    private static String deleteTask(TaskList taskList, String input) throws KeloreInputError {
-        int taskNumber = parseTaskNumber(input);
-        return taskList.delete(taskNumber);
     }
 
     public static String echoString(String input) {
