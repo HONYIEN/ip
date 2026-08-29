@@ -1,3 +1,5 @@
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Scanner;
 
@@ -5,6 +7,7 @@ import java.util.Scanner;
 public class Kelore {
     private static final String INDENTATION = "    ";
     private static final String DIVIDER = "_".repeat(60);
+    private static final Path DATA_FILE_PATH = Path.of("data", "kelore.txt");
 
     /** Represents a command that Kelore can execute. */
     public enum Command {
@@ -61,7 +64,15 @@ public class Kelore {
         System.out.println(INDENTATION + DIVIDER);
 
         Scanner scanner = new Scanner(System.in);
-        TaskList taskList = new TaskList();
+        Storage storage = new Storage(DATA_FILE_PATH);
+        TaskList taskList;
+        try {
+            taskList = storage.load();
+        } catch (IOException e) {
+            System.out.println(INDENTATION + "Oops! I could not load your saved tasks.");
+            System.out.println(INDENTATION + e.getMessage());
+            taskList = new TaskList();
+        }
         while (true) {
             String input = scanner.nextLine();
             System.out.println(INDENTATION + DIVIDER);
@@ -79,27 +90,36 @@ public class Kelore {
                     break;
                 case MARK:
                     System.out.println(INDENTATION + updateTaskStatus(taskList, input, true));
+                    storage.save(taskList);
                     break;
                 case UNMARK:
                     System.out.println(INDENTATION + updateTaskStatus(taskList, input, false));
+                    storage.save(taskList);
                     break;
                 case DELETE:
                     System.out.println(INDENTATION + deleteTask(taskList, input));
+                    storage.save(taskList);
                     break;
                 case TODO:
                     System.out.println(INDENTATION + taskList.addToDos(input));
+                    storage.save(taskList);
                     break;
                 case DEADLINE:
                     System.out.println(INDENTATION + taskList.addDeadline(input));
+                    storage.save(taskList);
                     break;
                 case EVENT:
                     System.out.println(INDENTATION + taskList.addEvent(input));
+                    storage.save(taskList);
                     break;
                 default:
                     throw new AssertionError("Unhandled command: " + command);
                 }
             } catch (KeloreInputError e) {
                 System.out.println(INDENTATION + "Oops! " + e.getMessage());
+            } catch (IOException e) {
+                System.out.println(INDENTATION + "Oops! I could not save your tasks.");
+                System.out.println(INDENTATION + e.getMessage());
             }
             System.out.println(INDENTATION + DIVIDER);
         }
@@ -145,6 +165,16 @@ public class Kelore {
             return (isDone ? "X" : " "); // mark done task with X
         }
 
+        /** Returns {@code 1} when completed and {@code 0} otherwise for file storage. */
+        protected String getStorageStatus() {
+            return isDone ? "1" : "0";
+        }
+
+        /** Converts this task into the text format used in the data file. */
+        public String toStorageString() {
+            return Storage.joinFields("T", getStorageStatus(), description);
+        }
+
         /** Marks this task as completed. */
         public void markAsDone() {
             isDone = true;
@@ -175,6 +205,11 @@ public class Kelore {
         public String toString() {
             return "[D]" + super.toString() + " (by: " + by + ")";
         }
+
+        @Override
+        public String toStorageString() {
+            return Storage.joinFields("D", getStorageStatus(), description, by);
+        }
     }
     
     /** Represents a task without a date or time. */
@@ -186,6 +221,11 @@ public class Kelore {
         @Override
         public String toString() {
             return "[T]" + super.toString();
+        }
+
+        @Override
+        public String toStorageString() {
+            return Storage.joinFields("T", getStorageStatus(), description);
         }
     }
 
@@ -204,17 +244,41 @@ public class Kelore {
         public String toString() {
             return "[E]" + super.toString() + " (from: " + from + " to: " + to + ")";
         }
+
+        @Override
+        public String toStorageString() {
+            return Storage.joinFields("E", getStorageStatus(), description, from, to);
+        }
     }
 
     /** Stores tasks entered during the current program run. */
     public static class TaskList {
         private final ArrayList<Task> tasks = new ArrayList<>();
 
+        /** Creates an empty task list. */
+        public TaskList() {
+        }
+
+        /** Creates a task list containing tasks restored from storage. */
+        public TaskList(ArrayList<Task> tasks) {
+            this.tasks.addAll(tasks);
+        }
+
+        /** Returns each task in its file-storage representation. */
+        public ArrayList<String> toStorageLines() {
+            ArrayList<String> lines = new ArrayList<>();
+            for (Task task : tasks) {
+                lines.add(task.toStorageString());
+            }
+            return lines;
+        }
+
         /** Adds a task and returns the message to show the user. */
         public String add(String input) throws KeloreInputError {
             if (input.isBlank()) {
                 throw new KeloreInputError("The task description cannot be empty.");
             }
+            ensureFieldsCanBeStored(input);
 
             Task task = new Task(input);
             tasks.add(task);
@@ -237,6 +301,7 @@ public class Kelore {
             if (by.isEmpty()) {
                 throw new KeloreInputError("The deadline date/time cannot be empty.");
             }
+            ensureFieldsCanBeStored(description, by);
             Task deadline = new Deadline(description, by);
             return addTask(deadline);
         }
@@ -248,6 +313,7 @@ public class Kelore {
             if (description.isEmpty()) {
                 throw new KeloreInputError("The todo description cannot be empty.");
             }
+            ensureFieldsCanBeStored(description);
             Task todoTask = new ToDos(description);
             return addTask(todoTask);
         }
@@ -278,8 +344,18 @@ public class Kelore {
             if (to.isEmpty()) {
                 throw new KeloreInputError("The event end date/time cannot be empty.");
             }
+            ensureFieldsCanBeStored(description, from, to);
             Task event = new Event(description, from, to);
             return addTask(event);
+        }
+
+        /** Prevents task text from being confused with separators in the save file. */
+        private void ensureFieldsCanBeStored(String... fields) throws KeloreInputError {
+            for (String field : fields) {
+                if (field.contains(" | ")) {
+                    throw new KeloreInputError("Task details cannot contain the text ' | '.");
+                }
+            }
         }
 
         /** Stores a parsed task and creates the standard confirmation message. */
