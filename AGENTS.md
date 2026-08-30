@@ -39,6 +39,7 @@ After each code change, update or add the relevant JUnit tests as needed to cont
 
 ## Git
 
+For every future commit-message proposal or commit creation in this repository, agents must load and follow the project skill at `.agents/skills/seedu-git-standard/SKILL.md`. Agents must also follow its branch-naming rules when proposing or creating branches.
+
 Use lightweight tags unless the user requests an annotated tag.
-When proposing or creating a commit message, include enough detail to explain the rationale for the change.
 Do not commit or push unless explicitly asked.
