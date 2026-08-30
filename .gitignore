@@ -3,8 +3,12 @@
 /out/
 /*.iml
 
+# Machine-specific VS Code settings
+/.vscode/settings.json
+
 # Gradle build files
 /.gradle/
+/.gradle-user-home/
 /build/
 src/main/resources/docs/
 
