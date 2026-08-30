@@ -154,4 +154,33 @@ public class TaskListTest {
                 () -> tasks.displayTasksOn("on 31/2/2026"));
         assertThrows(KeloreInputException.class, () -> tasks.displayTasksOn("on"));
     }
+
+    @Test
+    public void find_matchingKeyword_returnsOnlyMatchingTasksWithMatchNumbers() throws Exception {
+        TaskList tasks = new TaskList();
+        tasks.addTodo("todo read book");
+        tasks.addTodo("todo buy groceries");
+        tasks.addDeadline("deadline return book /by 6/6/2026 1800");
+
+        String output = tasks.find("find book");
+
+        assertTrue(output.contains("1.[T][ ] read book"));
+        assertTrue(output.contains("2.[D][ ] return book"));
+        assertFalse(output.contains("buy groceries"));
+    }
+
+    @Test
+    public void find_noMatchingKeyword_reportsNoMatchingTasks() throws Exception {
+        TaskList tasks = new TaskList();
+        tasks.addTodo("todo read book");
+
+        assertTrue(tasks.find("find pen").contains("No matching tasks."));
+    }
+
+    @Test
+    public void find_emptyKeyword_exceptionThrown() {
+        TaskList tasks = new TaskList();
+
+        assertThrows(KeloreInputException.class, () -> tasks.find("find"));
+    }
 }

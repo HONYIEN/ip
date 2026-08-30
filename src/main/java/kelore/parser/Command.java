@@ -4,7 +4,8 @@ package kelore.parser;
 public enum Command {
     BYE("bye", false), LIST("list", false), MARK("mark", true),
     UNMARK("unmark", true), DELETE("delete", true), TODO("todo", true),
-    DEADLINE("deadline", true), EVENT("event", true), ON("on", true);
+    DEADLINE("deadline", true), EVENT("event", true), ON("on", true),
+    FIND("find", true);
 
     private final String commandWord;
     private final boolean acceptsArguments;

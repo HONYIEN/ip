@@ -67,6 +67,9 @@ public class Kelore {
                 case ON:
                     ui.showMessage(taskList.displayTasksOn(input));
                     break;
+                case FIND:
+                    ui.showMessage(taskList.find(input));
+                    break;
                 default:
                     throw new AssertionError("Unhandled command");
                 }

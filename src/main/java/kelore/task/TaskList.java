@@ -133,6 +133,31 @@ public class TaskList {
         return output.toString();
     }
 
+    /** Returns tasks whose descriptions contain the keyword in {@code find KEYWORD}. */
+    public String find(String input) throws KeloreInputException {
+        String keyword = input.substring("find".length()).trim();
+        if (keyword.isEmpty()) {
+            throw new KeloreInputException("The search keyword cannot be empty.");
+        }
+
+        StringBuilder output = new StringBuilder(INDENTATION)
+                .append("Here are the matching tasks in your list:")
+                .append(System.lineSeparator());
+        int matchNumber = 1;
+        for (Task task : tasks) {
+            if (task.containsKeyword(keyword)) {
+                output.append(INDENTATION).append(matchNumber).append(".").append(task)
+                        .append(System.lineSeparator());
+                matchNumber++;
+            }
+        }
+        if (matchNumber == 1) {
+            output.append(INDENTATION).append("No matching tasks.")
+                    .append(System.lineSeparator());
+        }
+        return output.toString();
+    }
+
     private void ensureFieldsCanBeStored(String... fields) throws KeloreInputException {
         for (String field : fields) {
             if (field.contains(" | ")) {

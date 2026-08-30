@@ -22,6 +22,7 @@ public class ParserTest {
         assertEquals(Command.DEADLINE, parser.parseCommand("deadline submit /by 1/9/2026 1800"));
         assertEquals(Command.EVENT, parser.parseCommand("event meeting /from x /to y"));
         assertEquals(Command.ON, parser.parseCommand("on 1/9/2026"));
+        assertEquals(Command.FIND, parser.parseCommand("find book"));
     }
 
     @Test

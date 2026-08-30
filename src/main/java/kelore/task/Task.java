@@ -33,6 +33,11 @@ public class Task {
         return false;
     }
 
+    /** Returns whether this task's description contains the given keyword. */
+    public boolean containsKeyword(String keyword) {
+        return description.contains(keyword);
+    }
+
     public void markAsDone() {
         isDone = true;
     }
