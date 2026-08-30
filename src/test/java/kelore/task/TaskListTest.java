@@ -178,6 +178,32 @@ public class TaskListTest {
     }
 
     @Test
+    public void find_typoWithoutExactMatches_returnsCloseMatches() throws Exception {
+        TaskList tasks = new TaskList();
+        tasks.addTodo("todo read book");
+        tasks.addTodo("todo buy groceries");
+        tasks.addDeadline("deadline return book /by 6/6/2026 1800");
+
+        String output = tasks.find("find bok");
+
+        assertTrue(output.contains("1.[T][ ] read book"));
+        assertTrue(output.contains("2.[D][ ] return book"));
+        assertFalse(output.contains("buy groceries"));
+    }
+
+    @Test
+    public void find_exactAndCloseMatches_returnsExactMatchesOnly() throws Exception {
+        TaskList tasks = new TaskList();
+        tasks.addTodo("todo book flight");
+        tasks.addTodo("todo learn to cook");
+
+        String output = tasks.find("find book");
+
+        assertTrue(output.contains("book flight"));
+        assertFalse(output.contains("learn to cook"));
+    }
+
+    @Test
     public void find_emptyKeyword_exceptionThrown() {
         TaskList tasks = new TaskList();
 
