@@ -41,42 +41,42 @@ public class Kelore {
             ui.showDivider();
             try {
                 switch (parser.parseCommand(input)) {
-                case BYE:
-                    ui.showGoodbye();
-                    ui.close();
-                    return;
-                case LIST:
-                    ui.showMessage(taskList.display());
-                    break;
-                case MARK:
-                    ui.showIndentedLine(taskList.mark(parser.parseTaskNumber(input)));
-                    storage.save(taskList);
-                    break;
-                case UNMARK:
-                    ui.showIndentedLine(taskList.unmark(parser.parseTaskNumber(input)));
-                    storage.save(taskList);
-                    break;
-                case DELETE:
-                    ui.showIndentedLine(taskList.delete(parser.parseTaskNumber(input)));
-                    storage.save(taskList);
-                    break;
-                case TODO:
-                    ui.showIndentedLine(taskList.addTodo(input));
-                    storage.save(taskList);
-                    break;
-                case DEADLINE:
-                    ui.showIndentedLine(taskList.addDeadline(input));
-                    storage.save(taskList);
-                    break;
-                case EVENT:
-                    ui.showIndentedLine(taskList.addEvent(input));
-                    storage.save(taskList);
-                    break;
-                case ON:
-                    ui.showMessage(taskList.displayTasksOn(input));
-                    break;
-                default:
-                    throw new AssertionError("Unhandled command");
+                    case BYE:
+                        ui.showGoodbye();
+                        ui.close();
+                        return;
+                    case LIST:
+                        ui.showMessage(taskList.display());
+                        break;
+                    case MARK:
+                        ui.showIndentedLine(taskList.mark(parser.parseTaskNumber(input)));
+                        storage.save(taskList);
+                        break;
+                    case UNMARK:
+                        ui.showIndentedLine(taskList.unmark(parser.parseTaskNumber(input)));
+                        storage.save(taskList);
+                        break;
+                    case DELETE:
+                        ui.showIndentedLine(taskList.delete(parser.parseTaskNumber(input)));
+                        storage.save(taskList);
+                        break;
+                    case TODO:
+                        ui.showIndentedLine(taskList.addTodo(input));
+                        storage.save(taskList);
+                        break;
+                    case DEADLINE:
+                        ui.showIndentedLine(taskList.addDeadline(input));
+                        storage.save(taskList);
+                        break;
+                    case EVENT:
+                        ui.showIndentedLine(taskList.addEvent(input));
+                        storage.save(taskList);
+                        break;
+                    case ON:
+                        ui.showMessage(taskList.displayTasksOn(input));
+                        break;
+                    default:
+                        throw new AssertionError("Unhandled command");
                 }
             } catch (KeloreInputException e) {
                 ui.showError(e.getMessage());
