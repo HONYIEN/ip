@@ -77,25 +77,25 @@ public class Storage {
         }
         Task task;
         switch (fields[0]) {
-        case "T":
-            requireFieldCount(fields, 3, lineNumber);
-            task = new Todo(fields[2]);
-            break;
-        case "D":
-            requireFieldCount(fields, 4, lineNumber);
-            task = new Deadline(fields[2], parseDateTime(fields[3], lineNumber));
-            break;
-        case "E":
-            requireFieldCount(fields, 5, lineNumber);
-            LocalDateTime from = parseDateTime(fields[3], lineNumber);
-            LocalDateTime to = parseDateTime(fields[4], lineNumber);
-            if (to.isBefore(from)) {
+            case "T":
+                requireFieldCount(fields, 3, lineNumber);
+                task = new Todo(fields[2]);
+                break;
+            case "D":
+                requireFieldCount(fields, 4, lineNumber);
+                task = new Deadline(fields[2], parseDateTime(fields[3], lineNumber));
+                break;
+            case "E":
+                requireFieldCount(fields, 5, lineNumber);
+                LocalDateTime from = parseDateTime(fields[3], lineNumber);
+                LocalDateTime to = parseDateTime(fields[4], lineNumber);
+                if (to.isBefore(from)) {
+                    throw corruptedFileError(lineNumber);
+                }
+                task = new Event(fields[2], from, to);
+                break;
+            default:
                 throw corruptedFileError(lineNumber);
-            }
-            task = new Event(fields[2], from, to);
-            break;
-        default:
-            throw corruptedFileError(lineNumber);
         }
         if (fields[1].equals("1")) {
             task.markAsDone();
