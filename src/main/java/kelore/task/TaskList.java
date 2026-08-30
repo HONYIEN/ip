@@ -177,6 +177,90 @@ public class TaskList {
     }
 
     /**
+     * Returns tasks whose descriptions contain the keyword in {@code find KEYWORD}, falling
+     * back to close word matches only when there are no exact matches.
+     */
+    public String find(String input) throws KeloreInputException {
+        String keyword = input.substring("find".length()).trim();
+        if (keyword.isEmpty()) {
+            throw new KeloreInputException("The search keyword cannot be empty.");
+        }
+
+        ArrayList<Task> matches = findMatches(keyword, false);
+        if (matches.isEmpty()) {
+            matches = findMatches(keyword, true);
+        }
+
+        StringBuilder output = new StringBuilder(INDENTATION)
+                .append("Here are the matching tasks in your list:")
+                .append(System.lineSeparator());
+        for (int i = 0; i < matches.size(); i++) {
+            output.append(INDENTATION).append(i + 1).append(".").append(matches.get(i))
+                    .append(System.lineSeparator());
+        }
+        if (matches.isEmpty()) {
+            output.append(INDENTATION).append("No matching tasks.")
+                    .append(System.lineSeparator());
+        }
+        return output.toString();
+    }
+
+    private ArrayList<Task> findMatches(String keyword, boolean allowCloseMatches) {
+        ArrayList<Task> matches = new ArrayList<>();
+        for (Task task : tasks) {
+            boolean isMatch = allowCloseMatches
+                    ? task.containsCloseKeyword(keyword)
+                    : task.containsKeyword(keyword);
+            if (isMatch) {
+                matches.add(task);
+            }
+        }
+        return matches;
+    }
+
+    /**
+     * Returns tasks whose descriptions contain the keyword in {@code find KEYWORD}, falling
+     * back to close word matches only when there are no exact matches.
+     */
+    public String find(String input) throws KeloreInputException {
+        String keyword = input.substring("find".length()).trim();
+        if (keyword.isEmpty()) {
+            throw new KeloreInputException("The search keyword cannot be empty.");
+        }
+
+        ArrayList<Task> matches = findMatches(keyword, false);
+        if (matches.isEmpty()) {
+            matches = findMatches(keyword, true);
+        }
+
+        StringBuilder output = new StringBuilder(INDENTATION)
+                .append("Here are the matching tasks in your list:")
+                .append(System.lineSeparator());
+        for (int i = 0; i < matches.size(); i++) {
+            output.append(INDENTATION).append(i + 1).append(".").append(matches.get(i))
+                    .append(System.lineSeparator());
+        }
+        if (matches.isEmpty()) {
+            output.append(INDENTATION).append("No matching tasks.")
+                    .append(System.lineSeparator());
+        }
+        return output.toString();
+    }
+
+    private ArrayList<Task> findMatches(String keyword, boolean allowCloseMatches) {
+        ArrayList<Task> matches = new ArrayList<>();
+        for (Task task : tasks) {
+            boolean isMatch = allowCloseMatches
+                    ? task.containsCloseKeyword(keyword)
+                    : task.containsKeyword(keyword);
+            if (isMatch) {
+                matches.add(task);
+            }
+        }
+        return matches;
+    }
+
+    /**
      * Ensures that task fields do not contain the storage delimiter.
      *
      * @param fields Task fields to validate.

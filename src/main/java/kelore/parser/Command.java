@@ -19,7 +19,8 @@ public enum Command {
     /** Adds an event. */
     EVENT("event", true),
     /** Displays dated tasks occurring on a specified date. */
-    ON("on", true);
+    ON("on", true),
+    FIND("find", true);
 
     private final String commandWord;
     private final boolean acceptsArguments;
