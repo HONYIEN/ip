@@ -21,13 +21,24 @@ public class TaskList {
             .ofPattern("MMM d uuuu", Locale.ENGLISH);
     private final ArrayList<Task> tasks = new ArrayList<>();
 
+    /** Creates an empty task list. */
     public TaskList() {
     }
 
+    /**
+     * Creates a task list containing the specified tasks.
+     *
+     * @param tasks Initial tasks to include.
+     */
     public TaskList(ArrayList<Task> tasks) {
         this.tasks.addAll(tasks);
     }
 
+    /**
+     * Returns all tasks in the line-based format used by the data file.
+     *
+     * @return Serialized task records in list order.
+     */
     public ArrayList<String> toStorageLines() {
         ArrayList<String> lines = new ArrayList<>();
         for (Task task : tasks) {
@@ -36,7 +47,13 @@ public class TaskList {
         return lines;
     }
 
-    /** Parses and adds a to-do in the form {@code todo DESCRIPTION}. */
+    /**
+     * Parses and adds a to-do in the form {@code todo DESCRIPTION}.
+     *
+     * @param input Complete command containing the to-do details.
+     * @return Displayable confirmation of the added to-do.
+     * @throws KeloreInputException If the description is missing or cannot be stored.
+     */
     public String addTodo(String input) throws KeloreInputException {
         String description = input.substring("todo".length()).trim();
         if (description.isEmpty()) {
@@ -46,7 +63,13 @@ public class TaskList {
         return addTask(new Todo(description));
     }
 
-    /** Parses and adds a deadline in the form {@code deadline DESCRIPTION /by DATE}. */
+    /**
+     * Parses and adds a deadline in the form {@code deadline DESCRIPTION /by DATE}.
+     *
+     * @param input Complete command containing the deadline details.
+     * @return Displayable confirmation of the added deadline.
+     * @throws KeloreInputException If required details are missing, invalid, or cannot be stored.
+     */
     public String addDeadline(String input) throws KeloreInputException {
         String details = input.substring("deadline".length()).trim();
         int separatorIndex = details.indexOf("/by");
@@ -65,7 +88,13 @@ public class TaskList {
         return addTask(new Deadline(description, parseDateTime(byText)));
     }
 
-    /** Parses and adds an event in the form {@code event DESCRIPTION /from START /to END}. */
+    /**
+     * Parses and adds an event in the form {@code event DESCRIPTION /from START /to END}.
+     *
+     * @param input Complete command containing the event details.
+     * @return Displayable confirmation of the added event.
+     * @throws KeloreInputException If required details are missing, invalid, or cannot be stored.
+     */
     public String addEvent(String input) throws KeloreInputException {
         String details = input.substring("event".length()).trim();
         int fromIndex = details.indexOf("/from");
@@ -98,6 +127,13 @@ public class TaskList {
         return addTask(new Event(description, from, to));
     }
 
+    /**
+     * Returns a date and time parsed from user input.
+     *
+     * @param text Date and time in {@code d/M/yyyy HHmm} format.
+     * @return Parsed date and time.
+     * @throws KeloreInputException If the text is not a valid date and time.
+     */
     private LocalDateTime parseDateTime(String text) throws KeloreInputException {
         try {
             return LocalDateTime.parse(text, INPUT_DATE_TIME_FORMAT);
@@ -107,6 +143,13 @@ public class TaskList {
         }
     }
 
+    /**
+     * Returns the deadlines and events occurring on a user-specified date.
+     *
+     * @param input Complete {@code on d/M/yyyy} command.
+     * @return Displayable list of matching tasks.
+     * @throws KeloreInputException If the date is missing or invalid.
+     */
     public String displayTasksOn(String input) throws KeloreInputException {
         LocalDate date;
         try {
@@ -133,6 +176,12 @@ public class TaskList {
         return output.toString();
     }
 
+    /**
+     * Ensures that task fields do not contain the storage delimiter.
+     *
+     * @param fields Task fields to validate.
+     * @throws KeloreInputException If a field contains the storage delimiter.
+     */
     private void ensureFieldsCanBeStored(String... fields) throws KeloreInputException {
         for (String field : fields) {
             if (field.contains(" | ")) {
@@ -141,6 +190,12 @@ public class TaskList {
         }
     }
 
+    /**
+     * Adds a task and returns a confirmation message.
+     *
+     * @param task Task to add.
+     * @return Displayable confirmation of the added task and new task count.
+     */
     private String addTask(Task task) {
         tasks.add(task);
         return "Got it. I've added this task:" + System.lineSeparator()
@@ -148,6 +203,13 @@ public class TaskList {
                 + INDENTATION + "Now you have " + tasks.size() + " tasks in the list.";
     }
 
+    /**
+     * Marks the specified task as completed and returns a confirmation message.
+     *
+     * @param taskNumber One-based number of the task to mark.
+     * @return Displayable confirmation of the updated task.
+     * @throws KeloreInputException If no task has the specified number.
+     */
     public String mark(int taskNumber) throws KeloreInputException {
         Task task = getTask(taskNumber);
         task.markAsDone();
@@ -155,6 +217,13 @@ public class TaskList {
                 + INDENTATION + "  " + task;
     }
 
+    /**
+     * Marks the specified task as incomplete and returns a confirmation message.
+     *
+     * @param taskNumber One-based number of the task to unmark.
+     * @return Displayable confirmation of the updated task.
+     * @throws KeloreInputException If no task has the specified number.
+     */
     public String unmark(int taskNumber) throws KeloreInputException {
         Task task = getTask(taskNumber);
         task.markAsNotDone();
@@ -162,6 +231,13 @@ public class TaskList {
                 + INDENTATION + "  " + task;
     }
 
+    /**
+     * Deletes the specified task and returns a confirmation message.
+     *
+     * @param taskNumber One-based number of the task to delete.
+     * @return Displayable confirmation of the deleted task and new task count.
+     * @throws KeloreInputException If no task has the specified number.
+     */
     public String delete(int taskNumber) throws KeloreInputException {
         getTask(taskNumber);
         Task removedTask = tasks.remove(taskNumber - 1);
@@ -170,6 +246,13 @@ public class TaskList {
                 + INDENTATION + "Now you have " + tasks.size() + " tasks in the list.";
     }
 
+    /**
+     * Returns the task with the specified one-based number.
+     *
+     * @param taskNumber One-based task number.
+     * @return Task with the specified number.
+     * @throws KeloreInputException If no task has the specified number.
+     */
     private Task getTask(int taskNumber) throws KeloreInputException {
         if (taskNumber < 1 || taskNumber > tasks.size()) {
             throw new KeloreInputException("There is no task with that number.");
@@ -177,6 +260,11 @@ public class TaskList {
         return tasks.get(taskNumber - 1);
     }
 
+    /**
+     * Returns a displayable numbered list of all tasks.
+     *
+     * @return Numbered task list.
+     */
     public String display() {
         StringBuilder output = new StringBuilder(INDENTATION)
                 .append("Here are the tasks in your list:").append(System.lineSeparator());

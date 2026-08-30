@@ -19,10 +19,21 @@ public class Storage {
     private static final String FIELD_SEPARATOR = " | ";
     private final Path filePath;
 
+    /**
+     * Creates storage that uses the specified data file.
+     *
+     * @param filePath Path of the data file.
+     */
     public Storage(Path filePath) {
         this.filePath = filePath;
     }
 
+    /**
+     * Returns tasks loaded from the data file, or an empty list if the file is absent.
+     *
+     * @return Tasks represented by the data file.
+     * @throws IOException If the file cannot be read or contains corrupted data.
+     */
     public TaskList load() throws IOException {
         if (!Files.exists(filePath)) {
             return new TaskList();
@@ -37,6 +48,12 @@ public class Storage {
         return new TaskList(tasks);
     }
 
+    /**
+     * Saves all tasks to the data file, creating its parent directory when needed.
+     *
+     * @param taskList Tasks to save.
+     * @throws IOException If the data file cannot be written.
+     */
     public void save(TaskList taskList) throws IOException {
         Path parentDirectory = filePath.getParent();
         if (parentDirectory != null) {
@@ -45,6 +62,14 @@ public class Storage {
         Files.write(filePath, taskList.toStorageLines());
     }
 
+    /**
+     * Returns the task represented by one data-file record.
+     *
+     * @param line Record to parse.
+     * @param lineNumber One-based line number used in error messages.
+     * @return Parsed task.
+     * @throws IOException If the record is malformed.
+     */
     private Task parseTask(String line, int lineNumber) throws IOException {
         String[] fields = line.split(" \\| ", -1);
         if (fields.length < 3) {
@@ -80,6 +105,14 @@ public class Storage {
         return task;
     }
 
+    /**
+     * Returns a date and time parsed from its stored ISO-8601 representation.
+     *
+     * @param value Stored date and time to parse.
+     * @param lineNumber One-based line number used in error messages.
+     * @return Parsed date and time.
+     * @throws IOException If the value is not a valid date and time.
+     */
     private LocalDateTime parseDateTime(String value, int lineNumber) throws IOException {
         try {
             return LocalDateTime.parse(value);
@@ -88,6 +121,14 @@ public class Storage {
         }
     }
 
+    /**
+     * Ensures that a stored task record contains the expected number of fields.
+     *
+     * @param fields Fields in the stored record.
+     * @param expected Required number of fields.
+     * @param lineNumber One-based line number used in error messages.
+     * @throws IOException If the field count differs from the expected count.
+     */
     private void requireFieldCount(String[] fields, int expected, int lineNumber)
             throws IOException {
         if (fields.length != expected) {
@@ -95,11 +136,22 @@ public class Storage {
         }
     }
 
+    /**
+     * Returns an exception identifying a corrupted data-file record.
+     *
+     * @param lineNumber One-based number of the corrupted line.
+     * @return Exception describing the corrupted line.
+     */
     private IOException corruptedFileError(int lineNumber) {
         return new IOException("The data file is corrupted at line " + lineNumber + ".");
     }
 
-    /** Joins fields using the delimiter understood by the storage parser. */
+    /**
+     * Returns fields joined using the delimiter understood by the storage parser.
+     *
+     * @param fields Fields to join.
+     * @return Delimited storage record.
+     */
     public static String joinFields(String... fields) {
         return String.join(FIELD_SEPARATOR, fields);
     }

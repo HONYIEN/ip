@@ -2,19 +2,45 @@ package kelore.parser;
 
 /** Represents a command that Kelore can execute. */
 public enum Command {
-    BYE("bye", false), LIST("list", false), MARK("mark", true),
-    UNMARK("unmark", true), DELETE("delete", true), TODO("todo", true),
-    DEADLINE("deadline", true), EVENT("event", true), ON("on", true);
+    /** Exits Kelore. */
+    BYE("bye", false),
+    /** Displays all tasks. */
+    LIST("list", false),
+    /** Marks a task as completed. */
+    MARK("mark", true),
+    /** Marks a task as incomplete. */
+    UNMARK("unmark", true),
+    /** Deletes a task. */
+    DELETE("delete", true),
+    /** Adds a to-do. */
+    TODO("todo", true),
+    /** Adds a deadline. */
+    DEADLINE("deadline", true),
+    /** Adds an event. */
+    EVENT("event", true),
+    /** Displays dated tasks occurring on a specified date. */
+    ON("on", true);
 
     private final String commandWord;
     private final boolean acceptsArguments;
 
+    /**
+     * Creates a command with its command word and argument behavior.
+     *
+     * @param commandWord Word that invokes the command.
+     * @param acceptsArguments Whether the command accepts trailing arguments.
+     */
     Command(String commandWord, boolean acceptsArguments) {
         this.commandWord = commandWord;
         this.acceptsArguments = acceptsArguments;
     }
 
-    /** Returns whether the complete user input invokes this command. */
+    /**
+     * Returns whether the complete user input invokes this command.
+     *
+     * @param input Complete user input to check.
+     * @return True if the input invokes this command; false otherwise.
+     */
     boolean matches(String input) {
         return input.equals(commandWord)
                 || acceptsArguments && input.startsWith(commandWord + " ");
