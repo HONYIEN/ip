@@ -13,7 +13,15 @@ import kelore.ui.Ui;
 public class Kelore {
     private static final Path DATA_FILE_PATH = Path.of("data", "kelore.txt");
 
-    /** Starts the application. */
+    /** Creates a Kelore application entry point. */
+    public Kelore() {
+    }
+
+    /**
+     * Starts Kelore and processes commands until the user exits.
+     *
+     * @param args Command-line arguments, which Kelore does not use.
+     */
     public static void main(String[] args) {
         Ui ui = new Ui();
         Parser parser = new Parser();
@@ -80,6 +88,12 @@ public class Kelore {
         }
     }
 
+    /**
+     * Returns the supplied string unchanged.
+     *
+     * @param input String to return.
+     * @return The supplied string.
+     */
     public static String echoString(String input) {
         return input;
     }
