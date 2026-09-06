@@ -52,7 +52,7 @@ public class StorageTest {
     }
 
     @Test
-    public void load_corruptedRecords_throwsIOExceptionWithLineNumber() throws Exception {
+    public void load_corruptedRecords_throwsIoExceptionWithLineNumber() throws Exception {
         List<String> corruptedRecords = List.of(
                 "T | 0",
                 "T | 0 | description | extra",
@@ -65,8 +65,8 @@ public class StorageTest {
             Path file = temporaryDirectory.resolve("corrupted-" + i + ".txt");
             Files.writeString(file, System.lineSeparator() + corruptedRecords.get(i));
 
-            IOException exception = assertThrows(IOException.class,
-                    () -> new Storage(file).load());
+            IOException exception = assertThrows(
+                    IOException.class, () -> new Storage(file).load());
             assertEquals("The data file is corrupted at line 2.", exception.getMessage());
         }
     }
