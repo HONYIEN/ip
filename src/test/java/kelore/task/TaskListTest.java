@@ -44,14 +44,15 @@ public class TaskListTest {
     public void addDeadline_missingPartsOrInvalidDate_exceptionThrown() {
         TaskList tasks = new TaskList();
 
-        assertThrows(KeloreInputException.class,
-                () -> tasks.addDeadline("deadline submit report"));
-        assertThrows(KeloreInputException.class,
-                () -> tasks.addDeadline("deadline /by 2/9/2026 1800"));
-        assertThrows(KeloreInputException.class,
-                () -> tasks.addDeadline("deadline submit report /by"));
-        assertThrows(KeloreInputException.class,
-                () -> tasks.addDeadline("deadline submit report /by 31/2/2026 1800"));
+        assertThrows(
+                KeloreInputException.class, () -> tasks.addDeadline("deadline submit report"));
+        assertThrows(
+                KeloreInputException.class, () -> tasks.addDeadline("deadline /by 2/9/2026 1800"));
+        assertThrows(
+                KeloreInputException.class, () -> tasks.addDeadline("deadline submit report /by"));
+        assertThrows(
+                KeloreInputException.class, () -> tasks.addDeadline(
+                        "deadline submit report /by 31/2/2026 1800"));
     }
 
     @Test
@@ -69,18 +70,24 @@ public class TaskListTest {
     public void addEvent_missingPartsOrInvalidDates_exceptionThrown() {
         TaskList tasks = new TaskList();
 
-        assertThrows(KeloreInputException.class,
-                () -> tasks.addEvent("event conference /to 4/9/2026 1700"));
-        assertThrows(KeloreInputException.class,
-                () -> tasks.addEvent("event conference /from 2/9/2026 0900"));
-        assertThrows(KeloreInputException.class,
-                () -> tasks.addEvent("event /from 2/9/2026 0900 /to 4/9/2026 1700"));
-        assertThrows(KeloreInputException.class,
-                () -> tasks.addEvent("event conference /from /to 4/9/2026 1700"));
-        assertThrows(KeloreInputException.class,
-                () -> tasks.addEvent("event conference /from 2/9/2026 0900 /to"));
-        assertThrows(KeloreInputException.class,
-                () -> tasks.addEvent("event conference /from invalid /to 4/9/2026 1700"));
+        assertThrows(
+                KeloreInputException.class, () -> tasks.addEvent(
+                        "event conference /to 4/9/2026 1700"));
+        assertThrows(
+                KeloreInputException.class, () -> tasks.addEvent(
+                        "event conference /from 2/9/2026 0900"));
+        assertThrows(
+                KeloreInputException.class, () -> tasks.addEvent(
+                        "event /from 2/9/2026 0900 /to 4/9/2026 1700"));
+        assertThrows(
+                KeloreInputException.class, () -> tasks.addEvent(
+                        "event conference /from /to 4/9/2026 1700"));
+        assertThrows(
+                KeloreInputException.class, () -> tasks.addEvent(
+                        "event conference /from 2/9/2026 0900 /to"));
+        assertThrows(
+                KeloreInputException.class, () -> tasks.addEvent(
+                        "event conference /from invalid /to 4/9/2026 1700"));
     }
 
     @Test
@@ -150,8 +157,8 @@ public class TaskListTest {
     public void displayTasksOn_invalidDate_exceptionThrown() {
         TaskList tasks = new TaskList();
 
-        assertThrows(KeloreInputException.class,
-                () -> tasks.displayTasksOn("on 31/2/2026"));
+        assertThrows(
+                KeloreInputException.class, () -> tasks.displayTasksOn("on 31/2/2026"));
         assertThrows(KeloreInputException.class, () -> tasks.displayTasksOn("on"));
     }
 
