@@ -7,88 +7,92 @@ import kelore.exception.KeloreInputException;
 import kelore.parser.Parser;
 import kelore.storage.Storage;
 import kelore.task.TaskList;
-import kelore.ui.Ui;
 
-/** Runs the Kelore task-tracking chatbot. */
+/** Processes commands for the Kelore task-tracking chatbot. */
 public class Kelore {
     private static final Path DATA_FILE_PATH = Path.of("data", "kelore.txt");
+    private static final String WELCOME_MESSAGE = "Hello! I'm Kelore.\nWhat can I do for you?";
 
-    /** Creates a Kelore application entry point. */
+    private final Parser parser = new Parser();
+    private final Storage storage;
+    private final TaskList taskList;
+    private final String loadMessage;
+
+    /** Creates a Kelore chatbot that stores tasks in the default data file. */
     public Kelore() {
+        this(DATA_FILE_PATH);
     }
 
     /**
-     * Starts Kelore and processes commands until the user exits.
+     * Creates a Kelore chatbot that stores tasks in the specified data file.
      *
-     * @param args Command-line arguments, which Kelore does not use.
+     * @param dataFilePath Path of the data file.
      */
-    public static void main(String[] args) {
-        Ui ui = new Ui();
-        Parser parser = new Parser();
-        ui.showWelcome();
-        Storage storage = new Storage(DATA_FILE_PATH);
-        TaskList taskList;
+    public Kelore(Path dataFilePath) {
+        storage = new Storage(dataFilePath);
+        TaskList loadedTasks;
+        String loadingError = "";
         try {
-            taskList = storage.load();
+            loadedTasks = storage.load();
         } catch (IOException e) {
-            ui.showError("I could not load your saved tasks.");
-            ui.showIndentedLine(e.getMessage());
-            taskList = new TaskList();
+            loadedTasks = new TaskList();
+            loadingError = "\nOops! I could not load your saved tasks.\n" + e.getMessage();
         }
+        taskList = loadedTasks;
+        loadMessage = loadingError;
+    }
 
-        while (true) {
-            String input = ui.readCommand();
-            ui.showDivider();
-            try {
-                switch (parser.parseCommand(input)) {
-                    case BYE:
-                        ui.showGoodbye();
-                        ui.close();
-                        return;
-                    case LIST:
-                        ui.showMessage(taskList.display());
-                        break;
-                    case MARK:
-                        ui.showIndentedLine(taskList.mark(parser.parseTaskNumber(input)));
-                        storage.save(taskList);
-                        break;
-                    case UNMARK:
-                        ui.showIndentedLine(taskList.unmark(parser.parseTaskNumber(input)));
-                        storage.save(taskList);
-                        break;
-                    case DELETE:
-                        ui.showIndentedLine(taskList.delete(parser.parseTaskNumber(input)));
-                        storage.save(taskList);
-                        break;
-                    case TODO:
-                        ui.showIndentedLine(taskList.addTodo(input));
-                        storage.save(taskList);
-                        break;
-                    case DEADLINE:
-                        ui.showIndentedLine(taskList.addDeadline(input));
-                        storage.save(taskList);
-                        break;
-                    case EVENT:
-                        ui.showIndentedLine(taskList.addEvent(input));
-                        storage.save(taskList);
-                        break;
-                    case ON:
-                        ui.showMessage(taskList.displayTasksOn(input));
-                        break;
-                    case FIND:
-                        ui.showMessage(taskList.find(input));
-                        break;
-                    default:
-                        throw new AssertionError("Unhandled command");
-                }
-            } catch (KeloreInputException e) {
-                ui.showError(e.getMessage());
-            } catch (IOException e) {
-                ui.showError("I could not save your tasks.");
-                ui.showIndentedLine(e.getMessage());
+    /**
+     * Returns the greeting shown when the chatbot starts.
+     *
+     * @return Greeting and any data-loading error.
+     */
+    public String getWelcomeMessage() {
+        return WELCOME_MESSAGE + loadMessage;
+    }
+
+    /**
+     * Executes a user command and returns Kelore's response.
+     *
+     * @param input Complete command entered by the user.
+     * @return Displayable response to the command.
+     */
+    public String getResponse(String input) {
+        try {
+            switch (parser.parseCommand(input)) {
+                case BYE:
+                    return "Bye. Hope to see you again soon!";
+                case LIST:
+                    return taskList.display();
+                case MARK:
+                    return saveAfter(taskList.mark(parser.parseTaskNumber(input)));
+                case UNMARK:
+                    return saveAfter(taskList.unmark(parser.parseTaskNumber(input)));
+                case DELETE:
+                    return saveAfter(taskList.delete(parser.parseTaskNumber(input)));
+                case TODO:
+                    return saveAfter(taskList.addTodo(input));
+                case DEADLINE:
+                    return saveAfter(taskList.addDeadline(input));
+                case EVENT:
+                    return saveAfter(taskList.addEvent(input));
+                case ON:
+                    return taskList.displayTasksOn(input);
+                case FIND:
+                    return taskList.find(input);
+                default:
+                    throw new AssertionError("Unhandled command");
             }
-            ui.showDivider();
+        } catch (KeloreInputException e) {
+            return "Oops! " + e.getMessage();
+        } catch (IOException e) {
+            return "Oops! I could not save your tasks.\n" + e.getMessage();
         }
+    }
+
+    private String saveAfter(String response) throws IOException {
+        storage.save(taskList);
+        return response;
     }
 
     /**
