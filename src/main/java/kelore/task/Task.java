@@ -7,6 +7,11 @@ import kelore.storage.Storage;
 
 /** Represents a task and whether it has been completed. */
 public class Task {
+    private static final int SHORT_KEYWORD_MAX_LENGTH = 2;
+    private static final int MEDIUM_KEYWORD_MAX_LENGTH = 7;
+    private static final int MEDIUM_KEYWORD_ALLOWED_DISTANCE = 1;
+    private static final int LONG_KEYWORD_ALLOWED_DISTANCE = 2;
+
     /** Description of this task. */
     protected String description;
     /** Whether this task has been completed. */
@@ -80,30 +85,32 @@ public class Task {
     }
 
     private int getAllowedDistance(int keywordLength) {
-        if (keywordLength <= 2) {
+        if (keywordLength <= SHORT_KEYWORD_MAX_LENGTH) {
             return 0;
         }
-        if (keywordLength <= 7) {
-            return 1;
+        if (keywordLength <= MEDIUM_KEYWORD_MAX_LENGTH) {
+            return MEDIUM_KEYWORD_ALLOWED_DISTANCE;
         }
-        return 2;
+        return LONG_KEYWORD_ALLOWED_DISTANCE;
     }
 
     /** Calculates the minimum number of single-character edits between two strings. */
     private int levenshteinDistance(String first, String second) {
         int[] previousRow = new int[second.length() + 1];
-        for (int j = 0; j <= second.length(); j++) {
-            previousRow[j] = j;
+        for (int secondIndex = 0; secondIndex <= second.length(); secondIndex++) {
+            previousRow[secondIndex] = secondIndex;
         }
 
-        for (int i = 1; i <= first.length(); i++) {
+        for (int firstIndex = 1; firstIndex <= first.length(); firstIndex++) {
             int[] currentRow = new int[second.length() + 1];
-            currentRow[0] = i;
-            for (int j = 1; j <= second.length(); j++) {
-                int substitutionCost = first.charAt(i - 1) == second.charAt(j - 1) ? 0 : 1;
-                currentRow[j] = Math.min(
-                        Math.min(currentRow[j - 1] + 1, previousRow[j] + 1),
-                        previousRow[j - 1] + substitutionCost);
+            currentRow[0] = firstIndex;
+            for (int secondIndex = 1; secondIndex <= second.length(); secondIndex++) {
+                int substitutionCost = first.charAt(firstIndex - 1)
+                        == second.charAt(secondIndex - 1) ? 0 : 1;
+                currentRow[secondIndex] = Math.min(
+                        Math.min(currentRow[secondIndex - 1] + 1,
+                                previousRow[secondIndex] + 1),
+                        previousRow[secondIndex - 1] + substitutionCost);
             }
             previousRow = currentRow;
         }
