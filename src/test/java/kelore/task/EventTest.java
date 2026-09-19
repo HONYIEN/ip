@@ -1,6 +1,7 @@
 package kelore.task;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDate;
@@ -47,5 +48,10 @@ public class EventTest {
                 LocalDateTime.of(2026, 8, 10, 17, 0));
 
         assertTrue(sameDayEvent.occursOn(LocalDate.of(2026, 8, 10)));
+    }
+
+    @Test
+    public void constructor_endBeforeStart_assertionError() {
+        assertThrows(AssertionError.class, () -> new Event("Workshop", END, START));
     }
 }
