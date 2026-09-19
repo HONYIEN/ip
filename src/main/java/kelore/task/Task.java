@@ -1,6 +1,7 @@
 package kelore.task;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.Locale;
 
 import kelore.storage.Storage;
@@ -76,12 +77,9 @@ public class Task {
     public boolean containsCloseKeyword(String keyword) {
         String normalizedKeyword = keyword.toLowerCase(Locale.ENGLISH);
         int allowedDistance = getAllowedDistance(normalizedKeyword.length());
-        for (String word : description.toLowerCase(Locale.ENGLISH).split("\\s+")) {
-            if (levenshteinDistance(word, normalizedKeyword) <= allowedDistance) {
-                return true;
-            }
-        }
-        return false;
+        return Arrays.stream(description.toLowerCase(Locale.ENGLISH).split("\\s+"))
+                .anyMatch(word ->
+                        levenshteinDistance(word, normalizedKeyword) <= allowedDistance);
     }
 
     private int getAllowedDistance(int keywordLength) {
