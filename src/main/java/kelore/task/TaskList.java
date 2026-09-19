@@ -7,6 +7,7 @@ import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
 import java.util.ArrayList;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 import kelore.exception.KeloreInputException;
 
@@ -40,11 +41,9 @@ public class TaskList {
      * @return Serialized task records in list order.
      */
     public ArrayList<String> toStorageLines() {
-        ArrayList<String> lines = new ArrayList<>();
-        for (Task task : tasks) {
-            lines.add(task.toStorageString());
-        }
-        return lines;
+        return tasks.stream()
+                .map(Task::toStorageString)
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     /**
@@ -206,16 +205,11 @@ public class TaskList {
     }
 
     private ArrayList<Task> findMatches(String keyword, boolean allowCloseMatches) {
-        ArrayList<Task> matches = new ArrayList<>();
-        for (Task task : tasks) {
-            boolean isMatch = allowCloseMatches
-                    ? task.containsCloseKeyword(keyword)
-                    : task.containsKeyword(keyword);
-            if (isMatch) {
-                matches.add(task);
-            }
-        }
-        return matches;
+        return tasks.stream()
+                .filter(task -> allowCloseMatches
+                        ? task.containsCloseKeyword(keyword)
+                        : task.containsKeyword(keyword))
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     /**
