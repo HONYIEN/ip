@@ -32,6 +32,8 @@ public class TaskList {
      * @param tasks Initial tasks to include.
      */
     public TaskList(ArrayList<Task> tasks) {
+        assert tasks != null : "The initial task list must not be null";
+        assert !tasks.contains(null) : "The initial task list must not contain null tasks";
         this.tasks.addAll(tasks);
     }
 
@@ -222,7 +224,10 @@ public class TaskList {
      * @return Displayable confirmation of the added task and new task count.
      */
     private String addTask(Task task) {
+        assert task != null : "The task to add must not be null";
+        int previousSize = tasks.size();
         tasks.add(task);
+        assert tasks.size() == previousSize + 1 : "Adding a task must increase the task count";
         return "Got it. I've added this task:" + System.lineSeparator()
                 + INDENTATION + "  " + task + System.lineSeparator()
                 + INDENTATION + "Now you have " + tasks.size() + " tasks in the list.";
@@ -282,6 +287,8 @@ public class TaskList {
         if (taskNumber < 1 || taskNumber > tasks.size()) {
             throw new KeloreInputException("There is no task with that number.");
         }
+        assert taskNumber - 1 >= 0 && taskNumber - 1 < tasks.size()
+                : "A validated task number must map to an existing list index";
         return tasks.get(taskNumber - 1);
     }
 
