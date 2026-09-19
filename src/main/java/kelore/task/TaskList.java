@@ -6,6 +6,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 import kelore.exception.KeloreInputException;
@@ -159,23 +160,16 @@ public class TaskList {
         } catch (DateTimeParseException e) {
             throw new KeloreInputException("Please use a valid date in the format d/M/yyyy.");
         }
-        StringBuilder output = new StringBuilder(INDENTATION)
-                .append("Here are the deadlines and events on ")
-                .append(date.format(DISPLAY_DATE_FORMAT)).append(":")
-                .append(System.lineSeparator());
-        int matchNumber = 1;
+
+        ArrayList<Task> matches = new ArrayList<>();
         for (Task task : tasks) {
             if (task.occursOn(date)) {
-                output.append(INDENTATION).append(matchNumber).append(".").append(task)
-                        .append(System.lineSeparator());
-                matchNumber++;
+                matches.add(task);
             }
         }
-        if (matchNumber == 1) {
-            output.append(INDENTATION).append("No matching tasks.")
-                    .append(System.lineSeparator());
-        }
-        return output.toString();
+        String heading = "Here are the deadlines and events on "
+                + date.format(DISPLAY_DATE_FORMAT) + ":";
+        return formatMatchingTasks(heading, matches);
     }
 
     /**
@@ -193,18 +187,7 @@ public class TaskList {
             matches = findMatches(keyword, true);
         }
 
-        StringBuilder output = new StringBuilder(INDENTATION)
-                .append("Here are the matching tasks in your list:")
-                .append(System.lineSeparator());
-        for (int i = 0; i < matches.size(); i++) {
-            output.append(INDENTATION).append(i + 1).append(".").append(matches.get(i))
-                    .append(System.lineSeparator());
-        }
-        if (matches.isEmpty()) {
-            output.append(INDENTATION).append("No matching tasks.")
-                    .append(System.lineSeparator());
-        }
-        return output.toString();
+        return formatMatchingTasks("Here are the matching tasks in your list:", matches);
     }
 
     private ArrayList<Task> findMatches(String keyword, boolean allowCloseMatches) {
@@ -315,10 +298,36 @@ public class TaskList {
      * @return Numbered task list.
      */
     public String display() {
-        StringBuilder output = new StringBuilder(INDENTATION)
-                .append("Here are the tasks in your list:").append(System.lineSeparator());
-        for (int i = 0; i < tasks.size(); i++) {
-            output.append(INDENTATION).append(i + 1).append(".").append(tasks.get(i))
+        return formatNumberedTasks("Here are the tasks in your list:", tasks);
+    }
+
+    /**
+     * Returns a heading and numbered task list, with a message when there are no matches.
+     *
+     * @param heading Heading to show above the tasks.
+     * @param matchingTasks Tasks that matched a query.
+     * @return Displayable matching-task list.
+     */
+    private String formatMatchingTasks(String heading, List<Task> matchingTasks) {
+        String output = formatNumberedTasks(heading, matchingTasks);
+        if (matchingTasks.isEmpty()) {
+            output += INDENTATION + "No matching tasks." + System.lineSeparator();
+        }
+        return output;
+    }
+
+    /**
+     * Returns a heading followed by the supplied tasks as a numbered list.
+     *
+     * @param heading Heading to show above the tasks.
+     * @param tasksToDisplay Tasks to number and display.
+     * @return Displayable numbered task list.
+     */
+    private String formatNumberedTasks(String heading, List<Task> tasksToDisplay) {
+        StringBuilder output = new StringBuilder(INDENTATION).append(heading)
+                .append(System.lineSeparator());
+        for (int i = 0; i < tasksToDisplay.size(); i++) {
+            output.append(INDENTATION).append(i + 1).append(".").append(tasksToDisplay.get(i))
                     .append(System.lineSeparator());
         }
         return output.toString();

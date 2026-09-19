@@ -97,13 +97,4 @@ public class Kelore {
         return response;
     }
 
-    /**
-     * Returns the supplied string unchanged.
-     *
-     * @param input String to return.
-     * @return The supplied string.
-     */
-    public static String echoString(String input) {
-        return input;
-    }
 }
