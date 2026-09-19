@@ -29,6 +29,7 @@ public class Kelore {
      * @param dataFilePath Path of the data file.
      */
     public Kelore(Path dataFilePath) {
+        assert dataFilePath != null : "The data file path must not be null";
         storage = new Storage(dataFilePath);
         TaskList loadedTasks;
         String loadingError = "";
@@ -38,6 +39,7 @@ public class Kelore {
             loadedTasks = new TaskList();
             loadingError = "\nOops! I could not load your saved tasks.\n" + e.getMessage();
         }
+        assert loadedTasks != null : "Loading must produce a task list";
         taskList = loadedTasks;
         loadMessage = loadingError;
     }

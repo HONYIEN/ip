@@ -25,6 +25,7 @@ public class Storage {
      * @param filePath Path of the data file.
      */
     public Storage(Path filePath) {
+        assert filePath != null : "The data file path must not be null";
         this.filePath = filePath;
     }
 
@@ -55,6 +56,7 @@ public class Storage {
      * @throws IOException If the data file cannot be written.
      */
     public void save(TaskList taskList) throws IOException {
+        assert taskList != null : "The task list to save must not be null";
         Path parentDirectory = filePath.getParent();
         if (parentDirectory != null) {
             Files.createDirectories(parentDirectory);
@@ -97,6 +99,7 @@ public class Storage {
             default:
                 throw corruptedFileError(lineNumber);
         }
+        assert task != null : "A recognized task type must produce a task";
         if (fields[1].equals("1")) {
             task.markAsDone();
         } else if (!fields[1].equals("0")) {
@@ -153,6 +156,10 @@ public class Storage {
      * @return Delimited storage record.
      */
     public static String joinFields(String... fields) {
+        assert fields != null : "Storage fields must not be null";
+        for (String field : fields) {
+            assert field != null : "A storage field must not be null";
+        }
         return String.join(FIELD_SEPARATOR, fields);
     }
 }
