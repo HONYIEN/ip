@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -160,6 +161,107 @@ public class TaskListTest {
         assertThrows(
                 KeloreInputException.class, () -> tasks.displayTasksOn("on 31/2/2026"));
         assertThrows(KeloreInputException.class, () -> tasks.displayTasksOn("on"));
+    }
+
+    @Test
+    public void findFreeTime_noEventsToday_returnsStartOfDailyWindow() throws Exception {
+        TaskList tasks = new TaskList();
+
+        String output = tasks.findFreeTime(
+                "free 4", LocalDateTime.of(2026, 9, 21, 7, 30));
+
+        assertEquals("The nearest 4-hour free slot is Sep 21 2026, 8:00 AM to 12:00 PM.",
+                output);
+    }
+
+    @Test
+    public void findFreeTime_searchStartsNow_roundsUpToNextMinute() throws Exception {
+        TaskList tasks = new TaskList();
+
+        String output = tasks.findFreeTime(
+                "free 1", LocalDateTime.of(2026, 9, 21, 9, 15, 1));
+
+        assertEquals("The nearest 1-hour free slot is Sep 21 2026, 9:16 AM to 10:16 AM.",
+                output);
+    }
+
+    @Test
+    public void findFreeTime_overlappingAdjacentAndCompletedEvents_usesFirstFreeGap()
+            throws Exception {
+        TaskList tasks = new TaskList();
+        tasks.addEvent("event first /from 21/9/2026 0800 /to 21/9/2026 1000");
+        tasks.addEvent("event overlap /from 21/9/2026 0900 /to 21/9/2026 1200");
+        tasks.addEvent("event adjacent /from 21/9/2026 1200 /to 21/9/2026 1300");
+        tasks.addEvent("event completed /from 21/9/2026 1300 /to 21/9/2026 1800");
+        tasks.mark(4);
+
+        String output = tasks.findFreeTime(
+                "free 4", LocalDateTime.of(2026, 9, 21, 7, 0));
+
+        assertEquals("The nearest 4-hour free slot is Sep 21 2026, 1:00 PM to 5:00 PM.",
+                output);
+    }
+
+    @Test
+    public void findFreeTime_deadlineAndZeroDurationEvent_doNotBlockTime() throws Exception {
+        TaskList tasks = new TaskList();
+        tasks.addTodo("todo prepare notes");
+        tasks.addDeadline("deadline submit /by 21/9/2026 0900");
+        tasks.addEvent("event instant /from 21/9/2026 0800 /to 21/9/2026 0800");
+
+        String output = tasks.findFreeTime(
+                "free 10", LocalDateTime.of(2026, 9, 21, 7, 0));
+
+        assertEquals("The nearest 10-hour free slot is Sep 21 2026, 8:00 AM to 6:00 PM.",
+                output);
+    }
+
+    @Test
+    public void findFreeTime_multiDayEvent_clipsEventAndSearchesLaterDays() throws Exception {
+        TaskList tasks = new TaskList();
+        tasks.addEvent("event conference /from 21/9/2026 0900 /to 22/9/2026 1500");
+
+        String output = tasks.findFreeTime(
+                "free 4", LocalDateTime.of(2026, 9, 21, 8, 0));
+
+        assertEquals("The nearest 4-hour free slot is Sep 23 2026, 8:00 AM to 12:00 PM.",
+                output);
+    }
+
+    @Test
+    public void findFreeTime_optionalFutureStart_startsOnSpecifiedDate() throws Exception {
+        TaskList tasks = new TaskList();
+
+        String output = tasks.findFreeTime(
+                "free 2 /from 26/9/2026", LocalDateTime.of(2026, 9, 21, 12, 0));
+
+        assertEquals("The nearest 2-hour free slot is Sep 26 2026, 8:00 AM to 10:00 AM.",
+                output);
+    }
+
+    @Test
+    public void findFreeTime_afterDailyWindow_searchesNextCalendarDay() throws Exception {
+        TaskList tasks = new TaskList();
+
+        String output = tasks.findFreeTime(
+                "free 4", LocalDateTime.of(2026, 9, 25, 18, 0));
+
+        assertEquals("The nearest 4-hour free slot is Sep 26 2026, 8:00 AM to 12:00 PM.",
+                output);
+    }
+
+    @Test
+    public void findFreeTime_invalidArguments_exceptionThrown() {
+        TaskList tasks = new TaskList();
+        LocalDateTime now = LocalDateTime.of(2026, 9, 21, 12, 0);
+        List<String> invalidInputs = List.of(
+                "free", "free 0", "free -1", "free 11", "free 1.5", "free four",
+                "free 4 extra", "free 4 /from", "free 4 /from 31/2/2026",
+                "free 4 /from 20/9/2026", "free 4 /from 22/9/2026 /from 23/9/2026");
+
+        for (String input : invalidInputs) {
+            assertThrows(KeloreInputException.class, () -> tasks.findFreeTime(input, now));
+        }
     }
 
     @Test

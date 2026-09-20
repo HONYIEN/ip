@@ -20,6 +20,8 @@ public enum Command {
     EVENT("event", true),
     /** Displays dated tasks occurring on a specified date. */
     ON("on", true),
+    /** Finds the earliest free time slot of a requested duration. */
+    FREE("free", true),
     FIND("find", true);
 
     private final String commandWord;
