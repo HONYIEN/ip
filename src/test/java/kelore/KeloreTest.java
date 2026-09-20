@@ -6,6 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -99,5 +102,16 @@ public class KeloreTest {
         String response = kelore.getResponse("todo read a book");
 
         assertTrue(response.startsWith("Oops! I could not save your tasks.\n"));
+    }
+
+    @Test
+    public void getResponse_freeCommand_returnsFreeTimeUsingInjectedClock() {
+        Clock clock = Clock.fixed(
+                Instant.parse("2026-09-21T01:00:00Z"), ZoneId.of("Asia/Singapore"));
+        Kelore kelore = new Kelore(temporaryDirectory.resolve("tasks.txt"), clock);
+
+        String response = kelore.getResponse("free 4");
+
+        assertTrue(response.contains("Sep 21 2026, 9:00 AM to 1:00 PM"));
     }
 }

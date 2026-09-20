@@ -2,6 +2,8 @@ package kelore;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.LocalDateTime;
 
 import kelore.exception.KeloreInputException;
 import kelore.parser.Parser;
@@ -14,13 +16,14 @@ public class Kelore {
     private static final String WELCOME_MESSAGE = "Hello! I'm Kelore.\nWhat can I do for you?";
 
     private final Parser parser = new Parser();
+    private final Clock clock;
     private final Storage storage;
     private final TaskList taskList;
     private final String loadMessage;
 
     /** Creates a Kelore chatbot that stores tasks in the default data file. */
     public Kelore() {
-        this(DATA_FILE_PATH);
+        this(DATA_FILE_PATH, Clock.systemDefaultZone());
     }
 
     /**
@@ -29,7 +32,19 @@ public class Kelore {
      * @param dataFilePath Path of the data file.
      */
     public Kelore(Path dataFilePath) {
+        this(dataFilePath, Clock.systemDefaultZone());
+    }
+
+    /**
+     * Creates a Kelore chatbot with a specified data file and clock.
+     *
+     * @param dataFilePath Path of the data file.
+     * @param clock Clock used to determine the current date and time.
+     */
+    public Kelore(Path dataFilePath, Clock clock) {
         assert dataFilePath != null : "The data file path must not be null";
+        assert clock != null : "The clock must not be null";
+        this.clock = clock;
         storage = new Storage(dataFilePath);
         TaskList loadedTasks;
         String loadingError = "";
@@ -80,6 +95,8 @@ public class Kelore {
                     return saveAfter(taskList.addEvent(input));
                 case ON:
                     return taskList.displayTasksOn(input);
+                case FREE:
+                    return taskList.findFreeTime(input, LocalDateTime.now(clock));
                 case FIND:
                     return taskList.find(input);
                 default:
