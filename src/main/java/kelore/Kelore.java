@@ -18,7 +18,7 @@ public class Kelore {
     private final Parser parser = new Parser();
     private final Clock clock;
     private final Storage storage;
-    private final TaskList taskList;
+    private TaskList taskList;
     private final String loadMessage;
 
     /** Creates a Kelore chatbot that stores tasks in the default data file. */
@@ -92,17 +92,21 @@ public class Kelore {
                 case LIST:
                     return Response.success(taskList.display());
                 case MARK:
-                    return Response.success(saveAfter(taskList.mark(parser.parseTaskNumber(input))));
+                    return Response.success(updateAndSave(
+                            updatedTasks -> updatedTasks.mark(parser.parseTaskNumber(input))));
                 case UNMARK:
-                    return Response.success(saveAfter(taskList.unmark(parser.parseTaskNumber(input))));
+                    return Response.success(updateAndSave(
+                            updatedTasks -> updatedTasks.unmark(parser.parseTaskNumber(input))));
                 case DELETE:
-                    return Response.success(saveAfter(taskList.delete(parser.parseTaskNumber(input))));
+                    return Response.success(updateAndSave(
+                            updatedTasks -> updatedTasks.delete(parser.parseTaskNumber(input))));
                 case TODO:
-                    return Response.success(saveAfter(taskList.addTodo(input)));
+                    return Response.success(updateAndSave(updatedTasks -> updatedTasks.addTodo(input)));
                 case DEADLINE:
-                    return Response.success(saveAfter(taskList.addDeadline(input)));
+                    return Response.success(updateAndSave(
+                            updatedTasks -> updatedTasks.addDeadline(input)));
                 case EVENT:
-                    return Response.success(saveAfter(taskList.addEvent(input)));
+                    return Response.success(updateAndSave(updatedTasks -> updatedTasks.addEvent(input)));
                 case ON:
                     return Response.success(taskList.displayTasksOn(input));
                 case FREE:
@@ -119,9 +123,26 @@ public class Kelore {
         }
     }
 
-    private String saveAfter(String response) throws IOException {
-        storage.save(taskList);
+    /**
+     * Applies and saves an update without changing the active list when saving fails.
+     *
+     * @param update Update to apply to a copy of the active task list.
+     * @return Response produced by the update.
+     * @throws KeloreInputException If the update arguments are invalid.
+     * @throws IOException If the updated task list cannot be saved.
+     */
+    private String updateAndSave(TaskListUpdate update) throws KeloreInputException, IOException {
+        TaskList updatedTaskList = taskList.copy();
+        String response = update.applyTo(updatedTaskList);
+        storage.save(updatedTaskList);
+        taskList = updatedTaskList;
         return response;
+    }
+
+    /** Represents an operation that updates a task list and produces a response. */
+    @FunctionalInterface
+    private interface TaskListUpdate {
+        String applyTo(TaskList tasks) throws KeloreInputException;
     }
 
     /**

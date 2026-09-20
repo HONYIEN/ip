@@ -22,6 +22,7 @@ public enum Command {
     ON("on", true),
     /** Finds the earliest free time slot of a requested duration. */
     FREE("free", true),
+    /** Finds tasks whose descriptions match a keyword. */
     FIND("find", true);
 
     private final String commandWord;

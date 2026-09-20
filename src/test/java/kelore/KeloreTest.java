@@ -103,6 +103,7 @@ public class KeloreTest {
         String response = kelore.getResponse("todo read a book");
 
         assertTrue(response.startsWith("Oops! I could not save your tasks.\n"));
+        assertFalse(kelore.getResponse("list").contains("read a book"));
     }
 
     @Test

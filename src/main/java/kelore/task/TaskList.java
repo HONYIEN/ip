@@ -60,6 +60,19 @@ public class TaskList {
     }
 
     /**
+     * Returns an independent copy of this task list and all its tasks.
+     *
+     * @return Deep copy of this task list.
+     */
+    public TaskList copy() {
+        TaskList copiedTaskList = new TaskList();
+        for (Task task : tasks) {
+            copiedTaskList.tasks.add(task.copy());
+        }
+        return copiedTaskList;
+    }
+
+    /**
      * Parses and adds a to-do in the form {@code todo DESCRIPTION}.
      *
      * @param input Complete command containing the to-do details.
@@ -329,6 +342,10 @@ public class TaskList {
     /**
      * Returns tasks whose descriptions contain the keyword in {@code find KEYWORD}, falling
      * back to close word matches only when there are no exact matches.
+     *
+     * @param input Complete command containing the keyword.
+     * @return Displayable list of matching tasks.
+     * @throws KeloreInputException If the keyword is empty.
      */
     public String find(String input) throws KeloreInputException {
         String keyword = input.substring("find".length()).trim();

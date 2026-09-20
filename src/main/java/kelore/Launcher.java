@@ -3,7 +3,10 @@ package kelore;
 import javafx.application.Application;
 
 /** Starts the JavaFX application. */
-public class Launcher {
+public final class Launcher {
+    private Launcher() {
+    }
+
     /**
      * Launches the Kelore GUI.
      *

@@ -32,6 +32,10 @@ public class Main extends Application {
     private final Button sendButton = new Button("Send");
     private final ScrollPane conversationScrollPane = new ScrollPane(dialogContainer);
 
+    /** Creates the Kelore JavaFX application. */
+    public Main() {
+    }
+
     @Override
     public void start(Stage stage) {
         conversationScrollPane.setFitToWidth(true);

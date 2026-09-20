@@ -24,4 +24,14 @@ public class Todo extends Task {
     public String toStorageString() {
         return Storage.joinFields("T", getStorageStatus(), description);
     }
+
+    /** Returns an independent copy of this to-do. */
+    @Override
+    Todo copy() {
+        Todo copiedTodo = new Todo(description);
+        if (isDone) {
+            copiedTodo.markAsDone();
+        }
+        return copiedTodo;
+    }
 }

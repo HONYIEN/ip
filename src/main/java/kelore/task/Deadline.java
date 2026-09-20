@@ -48,4 +48,14 @@ public class Deadline extends Task {
     public boolean occursOn(LocalDate date) {
         return by.toLocalDate().equals(date);
     }
+
+    /** Returns an independent copy of this deadline. */
+    @Override
+    Deadline copy() {
+        Deadline copiedDeadline = new Deadline(description, by);
+        if (isDone) {
+            copiedDeadline.markAsDone();
+        }
+        return copiedDeadline;
+    }
 }

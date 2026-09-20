@@ -24,6 +24,8 @@ public class Task {
      * @param description Description of the task.
      */
     public Task(String description) {
+        assert description != null : "A task must have a description";
+        assert !description.isBlank() : "A task description must not be blank";
         this.description = description;
         this.isDone = false;
     }
@@ -65,7 +67,12 @@ public class Task {
         return false;
     }
 
-    /** Returns whether this task's description contains the given keyword. */
+    /**
+     * Returns whether this task's description contains the given keyword.
+     *
+     * @param keyword Keyword to find.
+     * @return True if the description contains the keyword; false otherwise.
+     */
     public boolean containsKeyword(String keyword) {
         return description.contains(keyword);
     }
@@ -73,6 +80,9 @@ public class Task {
     /**
      * Returns whether any word in this task's description is a close match for the keyword.
      * A small length-based edit-distance limit avoids overly broad matches for short keywords.
+     *
+     * @param keyword Keyword to compare with the description's words.
+     * @return True if a word is sufficiently close to the keyword; false otherwise.
      */
     public boolean containsCloseKeyword(String keyword) {
         String normalizedKeyword = keyword.toLowerCase(Locale.ENGLISH);
@@ -113,6 +123,15 @@ public class Task {
             previousRow = currentRow;
         }
         return previousRow[second.length()];
+    }
+
+    /** Returns an independent copy of this task. */
+    Task copy() {
+        Task copiedTask = new Task(description);
+        if (isDone) {
+            copiedTask.markAsDone();
+        }
+        return copiedTask;
     }
 
     /** Marks this task as completed. */

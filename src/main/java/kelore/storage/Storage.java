@@ -77,6 +77,9 @@ public class Storage {
         if (fields.length < 3) {
             throw corruptedFileError(lineNumber);
         }
+        if (fields[2].isBlank()) {
+            throw corruptedFileError(lineNumber);
+        }
         Task task;
         switch (fields[0]) {
             case "T":

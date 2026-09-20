@@ -91,7 +91,9 @@ public class StorageTest {
                 "E | 0 | description | 2026-09-04T10:00 | 2026-09-03T10:00",
                 "E | 0 | description | 2026-09-03T10:00",
                 "X | 0 | description",
-                "T | maybe | description");
+                "T | maybe | description",
+                "T | 0 | ",
+                "D | 0 |     | 2026-09-02T18:00");
 
         for (int i = 0; i < corruptedRecords.size(); i++) {
             Path file = temporaryDirectory.resolve("corrupted-" + i + ".txt");

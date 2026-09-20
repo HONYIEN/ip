@@ -58,4 +58,14 @@ public class Event extends Task {
         LocalDate endDate = to.toLocalDate();
         return !date.isBefore(startDate) && !date.isAfter(endDate);
     }
+
+    /** Returns an independent copy of this event. */
+    @Override
+    Event copy() {
+        Event copiedEvent = new Event(description, from, to);
+        if (isDone) {
+            copiedEvent.markAsDone();
+        }
+        return copiedEvent;
+    }
 }
