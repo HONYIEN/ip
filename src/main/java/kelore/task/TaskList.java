@@ -1,11 +1,14 @@
 package kelore.task;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
@@ -15,12 +18,19 @@ import kelore.exception.KeloreInputException;
 /** Stores and manages the user's tasks. */
 public class TaskList {
     private static final String INDENTATION = "    ";
+    private static final LocalTime FREE_TIME_START = LocalTime.of(8, 0);
+    private static final LocalTime FREE_TIME_END = LocalTime.of(18, 0);
+    private static final int FREE_TIME_HOURS_PER_DAY = 10;
     private static final DateTimeFormatter INPUT_DATE_TIME_FORMAT = DateTimeFormatter
             .ofPattern("d/M/uuuu HHmm").withResolverStyle(ResolverStyle.STRICT);
     private static final DateTimeFormatter INPUT_DATE_FORMAT = DateTimeFormatter
             .ofPattern("d/M/uuuu").withResolverStyle(ResolverStyle.STRICT);
     private static final DateTimeFormatter DISPLAY_DATE_FORMAT = DateTimeFormatter
             .ofPattern("MMM d uuuu", Locale.ENGLISH);
+    private static final DateTimeFormatter DISPLAY_DATE_TIME_FORMAT = DateTimeFormatter
+            .ofPattern("MMM d uuuu, h:mm a", Locale.ENGLISH);
+    private static final DateTimeFormatter DISPLAY_TIME_FORMAT = DateTimeFormatter
+            .ofPattern("h:mm a", Locale.ENGLISH);
     private final ArrayList<Task> tasks = new ArrayList<>();
 
     /** Creates an empty task list. */
@@ -169,6 +179,151 @@ public class TaskList {
         String heading = "Here are the deadlines and events on "
                 + date.format(DISPLAY_DATE_FORMAT) + ":";
         return formatMatchingTasks(heading, matches);
+    }
+
+    /**
+     * Returns the earliest free interval of the requested length between 8:00 AM and 6:00 PM.
+     * Only incomplete events block time. Searches start today unless {@code /from} supplies a
+     * start date, and a search involving today starts at the next whole minute.
+     *
+     * @param input Complete {@code free HOURS [/from d/M/yyyy]} command.
+     * @param now Current local date and time used as the lower search boundary.
+     * @return Displayable description of the earliest matching interval.
+     * @throws KeloreInputException If the duration or optional starting date is invalid.
+     */
+    public String findFreeTime(String input, LocalDateTime now) throws KeloreInputException {
+        assert now != null : "The current date and time must not be null";
+        FreeTimeQuery query = parseFreeTimeQuery(input, now.toLocalDate());
+        Duration requestedDuration = Duration.ofHours(query.hours());
+        LocalDate date = query.startDate();
+        LocalDateTime roundedNow = roundUpToMinute(now);
+
+        while (true) {
+            LocalDateTime searchStart = date.atTime(FREE_TIME_START);
+            if (date.equals(now.toLocalDate()) && roundedNow.isAfter(searchStart)) {
+                searchStart = roundedNow;
+            }
+            LocalDateTime searchEnd = date.atTime(FREE_TIME_END);
+            LocalDateTime result = findFreeTimeOnDate(searchStart, searchEnd, requestedDuration);
+            if (result != null) {
+                LocalDateTime resultEnd = result.plus(requestedDuration);
+                return "The nearest " + query.hours() + "-hour free slot is "
+                        + result.format(DISPLAY_DATE_TIME_FORMAT) + " to "
+                        + resultEnd.format(DISPLAY_TIME_FORMAT) + ".";
+            }
+            date = date.plusDays(1);
+        }
+    }
+
+    private FreeTimeQuery parseFreeTimeQuery(String input, LocalDate today)
+            throws KeloreInputException {
+        String details = input.substring("free".length()).trim();
+        int fromIndex = details.indexOf("/from");
+        if (fromIndex >= 0
+                && details.indexOf("/from", fromIndex + "/from".length()) >= 0) {
+            throw new KeloreInputException("Please specify /from at most once.");
+        }
+
+        String hoursText = fromIndex < 0 ? details : details.substring(0, fromIndex).trim();
+        int hours;
+        try {
+            hours = Integer.parseInt(hoursText);
+        } catch (NumberFormatException e) {
+            throw new KeloreInputException(
+                    "Please specify the duration as a positive whole number of hours.");
+        }
+        if (hours <= 0 || hours > FREE_TIME_HOURS_PER_DAY) {
+            throw new KeloreInputException(
+                    "The duration must be between 1 and 10 whole hours.");
+        }
+
+        LocalDate startDate = today;
+        if (fromIndex >= 0) {
+            String dateText = details.substring(fromIndex + "/from".length()).trim();
+            try {
+                startDate = LocalDate.parse(dateText, INPUT_DATE_FORMAT);
+            } catch (DateTimeParseException e) {
+                throw new KeloreInputException(
+                        "Please use a valid /from date in the format d/M/yyyy.");
+            }
+            if (startDate.isBefore(today)) {
+                throw new KeloreInputException("The /from date cannot be before today.");
+            }
+        }
+        return new FreeTimeQuery(hours, startDate);
+    }
+
+    private LocalDateTime roundUpToMinute(LocalDateTime dateTime) {
+        LocalDateTime rounded = dateTime.withSecond(0).withNano(0);
+        if (dateTime.getSecond() > 0 || dateTime.getNano() > 0) {
+            rounded = rounded.plusMinutes(1);
+        }
+        return rounded;
+    }
+
+    private LocalDateTime findFreeTimeOnDate(LocalDateTime searchStart,
+            LocalDateTime searchEnd, Duration requestedDuration) {
+        if (!searchStart.isBefore(searchEnd)) {
+            return null;
+        }
+
+        ArrayList<TimeInterval> busyIntervals = getBusyIntervals(searchStart, searchEnd);
+        LocalDateTime cursor = searchStart;
+        for (TimeInterval interval : busyIntervals) {
+            if (Duration.between(cursor, interval.start()).compareTo(requestedDuration) >= 0) {
+                return cursor;
+            }
+            if (interval.end().isAfter(cursor)) {
+                cursor = interval.end();
+            }
+        }
+        if (Duration.between(cursor, searchEnd).compareTo(requestedDuration) >= 0) {
+            return cursor;
+        }
+        return null;
+    }
+
+    private ArrayList<TimeInterval> getBusyIntervals(LocalDateTime searchStart,
+            LocalDateTime searchEnd) {
+        ArrayList<TimeInterval> intervals = new ArrayList<>();
+        for (Task task : tasks) {
+            if (!(task instanceof Event event) || task.isDone) {
+                continue;
+            }
+            LocalDateTime clippedStart = event.from.isAfter(searchStart)
+                    ? event.from : searchStart;
+            LocalDateTime clippedEnd = event.to.isBefore(searchEnd) ? event.to : searchEnd;
+            if (clippedEnd.isAfter(clippedStart)) {
+                intervals.add(new TimeInterval(clippedStart, clippedEnd));
+            }
+        }
+        intervals.sort(Comparator.comparing(TimeInterval::start));
+        return mergeIntervals(intervals);
+    }
+
+    private ArrayList<TimeInterval> mergeIntervals(ArrayList<TimeInterval> intervals) {
+        ArrayList<TimeInterval> mergedIntervals = new ArrayList<>();
+        for (TimeInterval interval : intervals) {
+            if (mergedIntervals.isEmpty()) {
+                mergedIntervals.add(interval);
+                continue;
+            }
+            int lastIndex = mergedIntervals.size() - 1;
+            TimeInterval previous = mergedIntervals.get(lastIndex);
+            if (interval.start().isAfter(previous.end())) {
+                mergedIntervals.add(interval);
+            } else if (interval.end().isAfter(previous.end())) {
+                mergedIntervals.set(lastIndex,
+                        new TimeInterval(previous.start(), interval.end()));
+            }
+        }
+        return mergedIntervals;
+    }
+
+    private record FreeTimeQuery(int hours, LocalDate startDate) {
+    }
+
+    private record TimeInterval(LocalDateTime start, LocalDateTime end) {
     }
 
     /**
