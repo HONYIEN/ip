@@ -1,5 +1,6 @@
 package kelore;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
@@ -27,5 +28,19 @@ public class KeloreTest {
         Kelore kelore = new Kelore(temporaryDirectory.resolve("tasks.txt"));
 
         assertTrue(kelore.getResponse("dance").startsWith("Oops!"));
+    }
+
+    @Test
+    public void getResponseDetails_invalidCommand_marksResponseAsError() {
+        Kelore kelore = new Kelore(temporaryDirectory.resolve("tasks.txt"));
+
+        assertTrue(kelore.getResponseDetails("dance").isError());
+    }
+
+    @Test
+    public void getResponseDetails_validCommand_marksResponseAsSuccessful() {
+        Kelore kelore = new Kelore(temporaryDirectory.resolve("tasks.txt"));
+
+        assertFalse(kelore.getResponseDetails("list").isError());
     }
 }

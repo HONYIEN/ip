@@ -1,6 +1,10 @@
 package kelore;
 
+import java.util.Objects;
+
 import javafx.application.Application;
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.DoubleBinding;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -16,36 +20,71 @@ import javafx.stage.Stage;
 
 /** Displays the JavaFX user interface for Kelore. */
 public class Main extends Application {
+    private static final double INITIAL_WIDTH = 520;
+    private static final double INITIAL_HEIGHT = 640;
+    private static final double MINIMUM_WIDTH = 360;
+    private static final double MINIMUM_HEIGHT = 420;
+    private static final double USER_MESSAGE_WIDTH_RATIO = 0.76;
+
     private final Kelore kelore = new Kelore();
-    private final VBox dialogContainer = new VBox(10);
+    private final VBox dialogContainer = new VBox(12);
     private final TextField userInput = new TextField();
     private final Button sendButton = new Button("Send");
+    private final ScrollPane conversationScrollPane = new ScrollPane(dialogContainer);
 
     @Override
     public void start(Stage stage) {
-        ScrollPane scrollPane = new ScrollPane(dialogContainer);
-        scrollPane.setFitToWidth(true);
-        dialogContainer.setPadding(new Insets(10));
+        conversationScrollPane.setFitToWidth(true);
+        conversationScrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        conversationScrollPane.getStyleClass().add("conversation-scroll-pane");
+        dialogContainer.getStyleClass().add("dialog-container");
+        dialogContainer.setPadding(new Insets(16));
         dialogContainer.heightProperty().addListener(
-                observable -> scrollPane.setVvalue(1.0));
+                observable -> conversationScrollPane.setVvalue(1.0));
 
-        userInput.setPromptText("Enter a command...");
+        userInput.setPromptText("Type a command, e.g. list");
+        userInput.getStyleClass().add("command-input");
+        userInput.setAccessibleHelp("Enter a Kelore command, then press Enter to send it.");
         HBox.setHgrow(userInput, Priority.ALWAYS);
-        HBox inputArea = new HBox(8, userInput, sendButton);
-        inputArea.setPadding(new Insets(10));
+        sendButton.getStyleClass().add("send-button");
+        HBox inputArea = new HBox(10, userInput, sendButton);
+        inputArea.setAlignment(Pos.CENTER);
+        inputArea.setPadding(new Insets(12, 16, 16, 16));
+        inputArea.getStyleClass().add("input-area");
 
-        BorderPane root = new BorderPane(scrollPane);
+        BorderPane root = new BorderPane(conversationScrollPane);
+        root.setTop(createHeader());
         root.setBottom(inputArea);
-        Scene scene = new Scene(root, 500, 600);
+        root.getStyleClass().add("app-root");
+        Scene scene = new Scene(root, INITIAL_WIDTH, INITIAL_HEIGHT);
+        String styleSheet = Objects.requireNonNull(
+                getClass().getResource("/kelore/main.css"), "GUI stylesheet is missing")
+                .toExternalForm();
+        scene.getStylesheets().add(styleSheet);
 
         userInput.setOnAction(event -> handleUserInput());
         sendButton.setOnAction(event -> handleUserInput());
 
-        addDialog(kelore.getWelcomeMessage(), false);
+        addKeloreMessage(kelore.getWelcomeMessage(), false);
         stage.setTitle("Kelore");
         stage.setScene(scene);
+        stage.setMinWidth(MINIMUM_WIDTH);
+        stage.setMinHeight(MINIMUM_HEIGHT);
+        stage.setResizable(true);
         stage.show();
         userInput.requestFocus();
+    }
+
+    private VBox createHeader() {
+        Label title = new Label("Kelore");
+        title.getStyleClass().add("app-title");
+        Label subtitle = new Label("Your task companion");
+        subtitle.getStyleClass().add("app-subtitle");
+
+        VBox header = new VBox(1, title, subtitle);
+        header.setPadding(new Insets(12, 16, 12, 16));
+        header.getStyleClass().add("app-header");
+        return header;
     }
 
     /** Adds the user's command and Kelore's response to the conversation. */
@@ -55,33 +94,65 @@ public class Main extends Application {
             return;
         }
 
-        addDialog(input, true);
-        addDialog(kelore.getResponse(input), false);
+        addUserMessage(input);
+        Kelore.Response response = kelore.getResponseDetails(input);
+        addKeloreMessage(response.message(), response.isError());
         userInput.clear();
 
         if (input.equals("bye")) {
             userInput.setDisable(true);
+            userInput.setPromptText("Conversation ended");
             sendButton.setDisable(true);
         }
     }
 
     /**
-     * Adds one message to the appropriate side of the conversation.
+     * Adds a compact user command to the right side of the conversation.
      *
      * @param message Message to display.
-     * @param isUser True for a user message; false for a Kelore message.
      */
-    private void addDialog(String message, boolean isUser) {
-        Label label = new Label((isUser ? "You:\n" : "Kelore:\n") + message.strip());
-        label.setMaxWidth(350);
-        label.setWrapText(true);
-        label.setPadding(new Insets(8));
-        label.setStyle(isUser
-                ? "-fx-background-color: #dbeafe; -fx-background-radius: 8;"
-                : "-fx-background-color: #e5e7eb; -fx-background-radius: 8;");
+    private void addUserMessage(String message) {
+        Label messageLabel = createWrappingLabel(message.strip(), "user-message-text");
+        VBox bubble = new VBox(messageLabel);
+        bubble.getStyleClass().add("user-message");
+        DoubleBinding maximumWidth = Bindings.createDoubleBinding(() ->
+                conversationScrollPane.getViewportBounds().getWidth() * USER_MESSAGE_WIDTH_RATIO,
+                conversationScrollPane.viewportBoundsProperty());
+        bubble.maxWidthProperty().bind(maximumWidth);
 
-        HBox row = new HBox(label);
-        row.setAlignment(isUser ? Pos.CENTER_RIGHT : Pos.CENTER_LEFT);
+        HBox row = new HBox(bubble);
+        row.setAlignment(Pos.CENTER_RIGHT);
+        row.getStyleClass().add("message-row");
         dialogContainer.getChildren().add(row);
+    }
+
+    /**
+     * Adds a readable Kelore response or a visually prominent error card.
+     *
+     * @param message Message to display.
+     * @param isError Whether the message reports an error.
+     */
+    private void addKeloreMessage(String message, boolean isError) {
+        Label heading = new Label(isError ? "NEEDS ATTENTION" : "KELORE");
+        heading.getStyleClass().add("message-heading");
+        Label messageLabel = createWrappingLabel(message.strip(), "kelore-message-text");
+
+        VBox card = new VBox(5, heading, messageLabel);
+        card.setMaxWidth(Double.MAX_VALUE);
+        card.getStyleClass().add(isError ? "error-message" : "kelore-message");
+        HBox.setHgrow(card, Priority.ALWAYS);
+
+        HBox row = new HBox(card);
+        row.setMaxWidth(Double.MAX_VALUE);
+        row.getStyleClass().add("message-row");
+        dialogContainer.getChildren().add(row);
+    }
+
+    private Label createWrappingLabel(String message, String styleClass) {
+        Label label = new Label(message);
+        label.setWrapText(true);
+        label.setMaxWidth(Double.MAX_VALUE);
+        label.getStyleClass().add(styleClass);
+        return label;
     }
 }
