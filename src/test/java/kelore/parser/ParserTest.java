@@ -39,6 +39,9 @@ public class ParserTest {
     public void parseCommand_unknownOrPartialCommand_exceptionThrown() {
         assertThrows(KeloreInputException.class, () -> parser.parseCommand("dance"));
         assertThrows(KeloreInputException.class, () -> parser.parseCommand("todoist work"));
+        assertThrows(KeloreInputException.class, () -> parser.parseCommand(""));
+        assertThrows(KeloreInputException.class, () -> parser.parseCommand(" Todo work"));
+        assertThrows(KeloreInputException.class, () -> parser.parseCommand("list "));
     }
 
     @Test
@@ -48,8 +51,18 @@ public class ParserTest {
 
     @Test
     public void parseTaskNumber_missingOrNonIntegerNumber_exceptionThrown() {
+        String oversizedNumber = "999999999999999999999";
+
         assertThrows(KeloreInputException.class, () -> parser.parseTaskNumber("mark"));
         assertThrows(KeloreInputException.class, () -> parser.parseTaskNumber("mark one"));
         assertThrows(KeloreInputException.class, () -> parser.parseTaskNumber("mark 1.5"));
+        assertThrows(KeloreInputException.class, () -> parser.parseTaskNumber("mark 1 extra"));
+        assertThrows(
+                KeloreInputException.class, () -> parser.parseTaskNumber("mark " + oversizedNumber));
+    }
+
+    @Test
+    public void parseTaskNumber_negativeInteger_returnsNegativeInteger() throws Exception {
+        assertEquals(-2, parser.parseTaskNumber("delete -2"));
     }
 }
