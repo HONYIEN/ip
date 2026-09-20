@@ -2,9 +2,11 @@ package kelore.task;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -14,12 +16,35 @@ import kelore.exception.KeloreInputException;
 /** Tests the core task creation, mutation, and date-filtering behavior of {@link TaskList}. */
 public class TaskListTest {
     @Test
+    public void constructor_taskCollection_copiesTasksWithoutSharingList() {
+        ArrayList<Task> initialTasks = new ArrayList<>(List.of(new Todo("first")));
+        TaskList tasks = new TaskList(initialTasks);
+
+        initialTasks.add(new Todo("second"));
+
+        assertEquals(List.of("T | 0 | first"), tasks.toStorageLines());
+        assertNotSame(initialTasks, tasks.toStorageLines());
+    }
+
+    @Test
+    public void constructor_nullListOrListContainingNull_assertionError() {
+        assertThrows(AssertionError.class, () -> new TaskList(null));
+
+        ArrayList<Task> tasksContainingNull = new ArrayList<>();
+        tasksContainingNull.add(null);
+        assertThrows(AssertionError.class, () -> new TaskList(tasksContainingNull));
+    }
+
+    @Test
     public void addTodo_validInput_addsTodo() throws Exception {
         TaskList tasks = new TaskList();
 
-        tasks.addTodo("todo read a book");
+        String response = tasks.addTodo("todo read a book");
 
         assertEquals(List.of("T | 0 | read a book"), tasks.toStorageLines());
+        assertEquals("Got it. I've added this task:" + System.lineSeparator()
+                + "      [T][ ] read a book" + System.lineSeparator()
+                + "    Now you have 1 tasks in the list.", response);
     }
 
     @Test
@@ -53,6 +78,22 @@ public class TaskListTest {
         assertThrows(
                 KeloreInputException.class, () -> tasks.addDeadline(
                         "deadline submit report /by 31/2/2026 1800"));
+        assertThrows(
+                KeloreInputException.class, () -> tasks.addDeadline(
+                        "deadline submit | report /by 2/9/2026 1800"));
+        assertThrows(
+                KeloreInputException.class, () -> tasks.addDeadline(
+                        "deadline submit report /by 2/9/2026 2400"));
+    }
+
+    @Test
+    public void addDeadline_leapDay_addsDeadline() throws Exception {
+        TaskList tasks = new TaskList();
+
+        tasks.addDeadline("deadline celebrate /by 29/2/2028 0000");
+
+        assertEquals(List.of("D | 0 | celebrate | 2028-02-29T00:00"),
+                tasks.toStorageLines());
     }
 
     @Test
@@ -88,6 +129,12 @@ public class TaskListTest {
         assertThrows(
                 KeloreInputException.class, () -> tasks.addEvent(
                         "event conference /from invalid /to 4/9/2026 1700"));
+        assertThrows(
+                KeloreInputException.class, () -> tasks.addEvent(
+                        "event conference /from 2/9/2026 0900 /to invalid"));
+        assertThrows(
+                KeloreInputException.class, () -> tasks.addEvent(
+                        "event conference | online /from 2/9/2026 0900 /to 2/9/2026 1000"));
     }
 
     @Test
@@ -99,15 +146,29 @@ public class TaskListTest {
     }
 
     @Test
+    public void addEvent_sameStartAndEnd_addsEvent() throws Exception {
+        TaskList tasks = new TaskList();
+
+        tasks.addEvent("event reminder /from 2/9/2026 0900 /to 2/9/2026 0900");
+
+        assertEquals(List.of("E | 0 | reminder | 2026-09-02T09:00 | 2026-09-02T09:00"),
+                tasks.toStorageLines());
+    }
+
+    @Test
     public void markAndUnmark_validTaskNumber_updatesStoredStatus() throws Exception {
         TaskList tasks = new TaskList();
         tasks.addTodo("todo read a book");
 
-        tasks.mark(1);
+        String markedResponse = tasks.mark(1);
         assertEquals(List.of("T | 1 | read a book"), tasks.toStorageLines());
+        assertEquals("Nice! I've marked this task as done:" + System.lineSeparator()
+                + "      [T][X] read a book", markedResponse);
 
-        tasks.unmark(1);
+        String unmarkedResponse = tasks.unmark(1);
         assertEquals(List.of("T | 0 | read a book"), tasks.toStorageLines());
+        assertEquals("OK, I've marked this task as not done yet:" + System.lineSeparator()
+                + "      [T][ ] read a book", unmarkedResponse);
     }
 
     @Test
@@ -126,9 +187,27 @@ public class TaskListTest {
         tasks.addTodo("todo first");
         tasks.addTodo("todo second");
 
-        tasks.delete(1);
+        String response = tasks.delete(1);
 
         assertEquals(List.of("T | 0 | second"), tasks.toStorageLines());
+        assertEquals("Noted. I've removed this task:" + System.lineSeparator()
+                + "      [T][ ] first" + System.lineSeparator()
+                + "    Now you have 1 tasks in the list.", response);
+    }
+
+    @Test
+    public void display_emptyAndPopulatedList_formatsNumberedTasks() throws Exception {
+        TaskList tasks = new TaskList();
+        assertEquals("    Here are the tasks in your list:" + System.lineSeparator(),
+                tasks.display());
+
+        tasks.addTodo("todo first");
+        tasks.addDeadline("deadline second /by 2/9/2026 1800");
+
+        assertEquals("    Here are the tasks in your list:" + System.lineSeparator()
+                + "    1.[T][ ] first" + System.lineSeparator()
+                + "    2.[D][ ] second (by: Sep 2 2026, 6:00 PM)"
+                + System.lineSeparator(), tasks.display());
     }
 
     @Test
@@ -151,6 +230,18 @@ public class TaskListTest {
         TaskList tasks = new TaskList();
 
         assertTrue(tasks.displayTasksOn("on 1/1/2026").contains("No matching tasks."));
+    }
+
+    @Test
+    public void displayTasksOn_validDate_formatsHeadingAndRenumbersMatches() throws Exception {
+        TaskList tasks = new TaskList();
+        tasks.addTodo("todo first");
+        tasks.addDeadline("deadline second /by 2/9/2026 1800");
+
+        assertEquals("    Here are the deadlines and events on Sep 2 2026:"
+                + System.lineSeparator()
+                + "    1.[D][ ] second (by: Sep 2 2026, 6:00 PM)"
+                + System.lineSeparator(), tasks.displayTasksOn("on 2/9/2026"));
     }
 
     @Test
@@ -208,6 +299,16 @@ public class TaskListTest {
 
         assertTrue(output.contains("book flight"));
         assertFalse(output.contains("learn to cook"));
+    }
+
+    @Test
+    public void find_differentCase_fallsBackToCaseInsensitiveCloseMatch() throws Exception {
+        TaskList tasks = new TaskList();
+        tasks.addTodo("todo Read book");
+
+        String output = tasks.find("find read");
+
+        assertTrue(output.contains("Read book"));
     }
 
     @Test

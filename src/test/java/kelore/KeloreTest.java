@@ -1,7 +1,10 @@
 package kelore;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.junit.jupiter.api.Test;
@@ -11,6 +14,32 @@ import org.junit.jupiter.api.io.TempDir;
 public class KeloreTest {
     @TempDir
     private Path temporaryDirectory;
+
+    @Test
+    public void constructor_nullDataPath_assertionError() {
+        assertThrows(AssertionError.class, () -> new Kelore(null));
+    }
+
+    @Test
+    public void getWelcomeMessage_newDataFile_returnsGreeting() {
+        Kelore kelore = new Kelore(temporaryDirectory.resolve("tasks.txt"));
+
+        assertEquals("Hello! I'm Kelore.\nWhat can I do for you?", kelore.getWelcomeMessage());
+    }
+
+    @Test
+    public void getWelcomeMessage_corruptedDataFile_reportsLoadError() throws Exception {
+        Path dataFile = temporaryDirectory.resolve("tasks.txt");
+        Files.writeString(dataFile, "corrupted record");
+
+        Kelore kelore = new Kelore(dataFile);
+
+        assertEquals("Hello! I'm Kelore.\nWhat can I do for you?"
+                + "\nOops! I could not load your saved tasks.\n"
+                + "The data file is corrupted at line 1.", kelore.getWelcomeMessage());
+        assertEquals("    Here are the tasks in your list:" + System.lineSeparator(),
+                kelore.getResponse("list"));
+    }
 
     @Test
     public void getResponse_addThenReload_persistsAddedTask() {
@@ -27,5 +56,48 @@ public class KeloreTest {
         Kelore kelore = new Kelore(temporaryDirectory.resolve("tasks.txt"));
 
         assertTrue(kelore.getResponse("dance").startsWith("Oops!"));
+    }
+
+    @Test
+    public void getResponse_allSupportedCommands_dispatchesAndUpdatesTasks() {
+        Kelore kelore = new Kelore(temporaryDirectory.resolve("tasks.txt"));
+
+        assertEquals("Bye. Hope to see you again soon!", kelore.getResponse("bye"));
+        assertTrue(kelore.getResponse("todo read a book").contains("[T][ ] read a book"));
+        assertTrue(kelore.getResponse("deadline submit report /by 2/9/2026 1800")
+                .contains("[D][ ] submit report"));
+        assertTrue(kelore.getResponse(
+                "event conference /from 2/9/2026 0900 /to 3/9/2026 1700")
+                .contains("[E][ ] conference"));
+
+        assertTrue(kelore.getResponse("list").contains("3.[E][ ] conference"));
+        assertTrue(kelore.getResponse("mark 1").contains("[T][X] read a book"));
+        assertTrue(kelore.getResponse("unmark 1").contains("[T][ ] read a book"));
+        assertTrue(kelore.getResponse("find report").contains("submit report"));
+        assertTrue(kelore.getResponse("on 2/9/2026").contains("conference"));
+        assertTrue(kelore.getResponse("delete 2").contains("submit report"));
+        assertTrue(kelore.getResponse("list").contains("2.[E][ ] conference"));
+    }
+
+    @Test
+    public void getResponse_invalidArguments_returnsSpecificFriendlyErrors() {
+        Kelore kelore = new Kelore(temporaryDirectory.resolve("tasks.txt"));
+
+        assertEquals("Oops! Please provide a valid task number after the command.",
+                kelore.getResponse("mark"));
+        assertEquals("Oops! There is no task with that number.", kelore.getResponse("delete 1"));
+        assertEquals("Oops! The todo description cannot be empty.", kelore.getResponse("todo"));
+        assertEquals("Oops! The search keyword cannot be empty.", kelore.getResponse("find"));
+    }
+
+    @Test
+    public void getResponse_storageCannotCreateParent_returnsSaveError() throws Exception {
+        Path parentFile = temporaryDirectory.resolve("not-a-directory");
+        Files.writeString(parentFile, "content");
+        Kelore kelore = new Kelore(parentFile.resolve("tasks.txt"));
+
+        String response = kelore.getResponse("todo read a book");
+
+        assertTrue(response.startsWith("Oops! I could not save your tasks.\n"));
     }
 }
