@@ -1,6 +1,7 @@
 package kelore;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -102,6 +103,20 @@ public class KeloreTest {
         String response = kelore.getResponse("todo read a book");
 
         assertTrue(response.startsWith("Oops! I could not save your tasks.\n"));
+    }
+
+    @Test
+    public void getResponseDetails_invalidCommand_marksResponseAsError() {
+        Kelore kelore = new Kelore(temporaryDirectory.resolve("tasks.txt"));
+
+        assertTrue(kelore.getResponseDetails("dance").isError());
+    }
+
+    @Test
+    public void getResponseDetails_validCommand_marksResponseAsSuccessful() {
+        Kelore kelore = new Kelore(temporaryDirectory.resolve("tasks.txt"));
+
+        assertFalse(kelore.getResponseDetails("list").isError());
     }
 
     @Test

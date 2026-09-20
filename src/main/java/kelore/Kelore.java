@@ -75,37 +75,47 @@ public class Kelore {
      * @return Displayable response to the command.
      */
     public String getResponse(String input) {
+        return getResponseDetails(input).message();
+    }
+
+    /**
+     * Executes a user command and returns its message together with its display type.
+     *
+     * @param input Complete command entered by the user.
+     * @return Response containing the displayable message and whether it is an error.
+     */
+    public Response getResponseDetails(String input) {
         try {
             switch (parser.parseCommand(input)) {
                 case BYE:
-                    return "Bye. Hope to see you again soon!";
+                    return Response.success("Bye. Hope to see you again soon!");
                 case LIST:
-                    return taskList.display();
+                    return Response.success(taskList.display());
                 case MARK:
-                    return saveAfter(taskList.mark(parser.parseTaskNumber(input)));
+                    return Response.success(saveAfter(taskList.mark(parser.parseTaskNumber(input))));
                 case UNMARK:
-                    return saveAfter(taskList.unmark(parser.parseTaskNumber(input)));
+                    return Response.success(saveAfter(taskList.unmark(parser.parseTaskNumber(input))));
                 case DELETE:
-                    return saveAfter(taskList.delete(parser.parseTaskNumber(input)));
+                    return Response.success(saveAfter(taskList.delete(parser.parseTaskNumber(input))));
                 case TODO:
-                    return saveAfter(taskList.addTodo(input));
+                    return Response.success(saveAfter(taskList.addTodo(input)));
                 case DEADLINE:
-                    return saveAfter(taskList.addDeadline(input));
+                    return Response.success(saveAfter(taskList.addDeadline(input)));
                 case EVENT:
-                    return saveAfter(taskList.addEvent(input));
+                    return Response.success(saveAfter(taskList.addEvent(input)));
                 case ON:
-                    return taskList.displayTasksOn(input);
+                    return Response.success(taskList.displayTasksOn(input));
                 case FREE:
-                    return taskList.findFreeTime(input, LocalDateTime.now(clock));
+                    return Response.success(taskList.findFreeTime(input, LocalDateTime.now(clock)));
                 case FIND:
-                    return taskList.find(input);
+                    return Response.success(taskList.find(input));
                 default:
                     throw new AssertionError("Unhandled command");
             }
         } catch (KeloreInputException e) {
-            return "Oops! " + e.getMessage();
+            return Response.error("Oops! " + e.getMessage());
         } catch (IOException e) {
-            return "Oops! I could not save your tasks.\n" + e.getMessage();
+            return Response.error("Oops! I could not save your tasks.\n" + e.getMessage());
         }
     }
 
@@ -114,4 +124,31 @@ public class Kelore {
         return response;
     }
 
+    /**
+     * Represents a message from Kelore and how the GUI should present it.
+     *
+     * @param message Displayable response text.
+     * @param isError Whether the response reports an error.
+     */
+    public record Response(String message, boolean isError) {
+        /**
+         * Creates a normal response.
+         *
+         * @param message Displayable response text.
+         * @return Normal response containing the text.
+         */
+        public static Response success(String message) {
+            return new Response(message, false);
+        }
+
+        /**
+         * Creates an error response.
+         *
+         * @param message Displayable error text.
+         * @return Error response containing the text.
+         */
+        public static Response error(String message) {
+            return new Response(message, true);
+        }
+    }
 }
