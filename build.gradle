@@ -64,5 +64,5 @@ jar {
 }
 
 shadowJar {
-    archiveFileName = 'duke.jar'
+    archiveFileName = 'kelore.jar'
 }
