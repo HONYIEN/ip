@@ -20,6 +20,7 @@ Apply the [SE-EDU Git conventions](https://se-education.org/guides/conventions/g
 - Include a body for every non-trivial commit and separate it from the subject with one blank line.
 - Wrap body text at 72 characters and separate paragraphs with blank lines. Use bullet points when they improve clarity.
 - Explain what changes and why it is needed; leave implementation details that are evident from the diff out of the message.
+- Give enough context to judge the change without reading the diff, including why the chosen approach fits. Avoid repeating information already in code comments.
 - Describe the existing situation in the present tense and the change in the imperative mood.
 - Avoid redundant temporal words such as "currently" and "originally".
 - If the body becomes overly long or covers unrelated motivations, split the work into smaller, coherent commits.

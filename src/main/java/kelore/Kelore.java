@@ -1,11 +1,11 @@
 package kelore;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.LocalDateTime;
 
 import kelore.exception.KeloreInputException;
+import kelore.exception.StorageException;
 import kelore.parser.Parser;
 import kelore.storage.Storage;
 import kelore.task.TaskList;
@@ -20,6 +20,7 @@ public class Kelore {
     private final Storage storage;
     private TaskList taskList;
     private final String loadMessage;
+    private final boolean isSavingEnabled;
 
     /** Creates a Kelore chatbot that stores tasks in the default data file. */
     public Kelore() {
@@ -48,15 +49,18 @@ public class Kelore {
         storage = new Storage(dataFilePath);
         TaskList loadedTasks;
         String loadingError = "";
+        boolean canSave = true;
         try {
             loadedTasks = storage.load();
-        } catch (IOException e) {
+        } catch (StorageException e) {
             loadedTasks = new TaskList();
             loadingError = "\nOops! I could not load your saved tasks.\n" + e.getMessage();
+            canSave = false;
         }
         assert loadedTasks != null : "Loading must produce a task list";
         taskList = loadedTasks;
         loadMessage = loadingError;
+        isSavingEnabled = canSave;
     }
 
     /**
@@ -86,39 +90,46 @@ public class Kelore {
      */
     public Response getResponseDetails(String input) {
         try {
-            switch (parser.parseCommand(input)) {
+            String normalizedInput = parser.normalizeInput(input);
+            switch (parser.parseCommand(normalizedInput)) {
                 case BYE:
                     return Response.success("Bye. Hope to see you again soon!");
                 case LIST:
                     return Response.success(taskList.display());
                 case MARK:
                     return Response.success(updateAndSave(
-                            updatedTasks -> updatedTasks.mark(parser.parseTaskNumber(input))));
+                            updatedTasks -> updatedTasks.mark(
+                                    parser.parseTaskNumber(normalizedInput))));
                 case UNMARK:
                     return Response.success(updateAndSave(
-                            updatedTasks -> updatedTasks.unmark(parser.parseTaskNumber(input))));
+                            updatedTasks -> updatedTasks.unmark(
+                                    parser.parseTaskNumber(normalizedInput))));
                 case DELETE:
                     return Response.success(updateAndSave(
-                            updatedTasks -> updatedTasks.delete(parser.parseTaskNumber(input))));
+                            updatedTasks -> updatedTasks.delete(
+                                    parser.parseTaskNumber(normalizedInput))));
                 case TODO:
-                    return Response.success(updateAndSave(updatedTasks -> updatedTasks.addTodo(input)));
+                    return Response.success(updateAndSave(
+                            updatedTasks -> updatedTasks.addTodo(normalizedInput)));
                 case DEADLINE:
                     return Response.success(updateAndSave(
-                            updatedTasks -> updatedTasks.addDeadline(input)));
+                            updatedTasks -> updatedTasks.addDeadline(normalizedInput)));
                 case EVENT:
-                    return Response.success(updateAndSave(updatedTasks -> updatedTasks.addEvent(input)));
+                    return Response.success(updateAndSave(
+                            updatedTasks -> updatedTasks.addEvent(normalizedInput)));
                 case ON:
-                    return Response.success(taskList.displayTasksOn(input));
+                    return Response.success(taskList.displayTasksOn(normalizedInput));
                 case FREE:
-                    return Response.success(taskList.findFreeTime(input, LocalDateTime.now(clock)));
+                    return Response.success(taskList.findFreeTime(
+                            normalizedInput, LocalDateTime.now(clock)));
                 case FIND:
-                    return Response.success(taskList.find(input));
+                    return Response.success(taskList.find(normalizedInput));
                 default:
                     throw new AssertionError("Unhandled command");
             }
         } catch (KeloreInputException e) {
             return Response.error("Oops! " + e.getMessage());
-        } catch (IOException e) {
+        } catch (StorageException e) {
             return Response.error("Oops! I could not save your tasks.\n" + e.getMessage());
         }
     }
@@ -129,9 +140,14 @@ public class Kelore {
      * @param update Update to apply to a copy of the active task list.
      * @return Response produced by the update.
      * @throws KeloreInputException If the update arguments are invalid.
-     * @throws IOException If the updated task list cannot be saved.
+     * @throws StorageException If the updated task list cannot be saved.
      */
-    private String updateAndSave(TaskListUpdate update) throws KeloreInputException, IOException {
+    private String updateAndSave(TaskListUpdate update)
+            throws KeloreInputException, StorageException {
+        if (!isSavingEnabled) {
+            throw new StorageException(
+                    "Saving is disabled because the existing data file could not be loaded.");
+        }
         TaskList updatedTaskList = taskList.copy();
         String response = update.applyTo(updatedTaskList);
         storage.save(updatedTaskList);

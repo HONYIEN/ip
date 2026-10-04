@@ -41,8 +41,15 @@ public class ParserTest {
         assertThrows(KeloreInputException.class, () -> parser.parseCommand("dance"));
         assertThrows(KeloreInputException.class, () -> parser.parseCommand("todoist work"));
         assertThrows(KeloreInputException.class, () -> parser.parseCommand(""));
-        assertThrows(KeloreInputException.class, () -> parser.parseCommand(" Todo work"));
-        assertThrows(KeloreInputException.class, () -> parser.parseCommand("list "));
+        assertThrows(KeloreInputException.class, () -> parser.parseCommand(null));
+    }
+
+    @Test
+    public void parseCommand_surroundingOrRepeatedWhitespace_returnsMatchingCommand()
+            throws Exception {
+        assertEquals(Command.TODO, parser.parseCommand("  todo   read book  "));
+        assertEquals(Command.MARK, parser.parseCommand("mark\t1"));
+        assertEquals(Command.LIST, parser.parseCommand(" list "));
     }
 
     @Test

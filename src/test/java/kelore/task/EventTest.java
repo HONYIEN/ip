@@ -67,10 +67,8 @@ public class EventTest {
     }
 
     @Test
-    public void constructor_sameStartAndEnd_createsEvent() {
-        Event event = new Event("Instant", START, START);
-
-        assertTrue(event.occursOn(START.toLocalDate()));
+    public void constructor_sameStartAndEnd_assertionError() {
+        assertThrows(AssertionError.class, () -> new Event("Instant", START, START));
     }
 
     @Test

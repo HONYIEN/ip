@@ -43,6 +43,10 @@ public class KeloreTest {
                 + "The data file is corrupted at line 1.", kelore.getWelcomeMessage());
         assertEquals("    Here are the tasks in your list:" + System.lineSeparator(),
                 kelore.getResponse("list"));
+        assertEquals("Oops! I could not save your tasks.\n"
+                        + "Saving is disabled because the existing data file could not be loaded.",
+                kelore.getResponse("todo replacement"));
+        assertEquals("corrupted record", Files.readString(dataFile));
     }
 
     @Test
@@ -60,6 +64,22 @@ public class KeloreTest {
         Kelore kelore = new Kelore(temporaryDirectory.resolve("tasks.txt"));
 
         assertTrue(kelore.getResponse("dance").startsWith("Oops!"));
+    }
+
+    @Test
+    public void getResponse_surroundingAndRepeatedWhitespace_acceptsCommand() {
+        Kelore kelore = new Kelore(temporaryDirectory.resolve("tasks.txt"));
+
+        assertTrue(kelore.getResponse("  todo   read a book  ").contains("read a book"));
+        assertTrue(kelore.getResponse("  list  ").contains("read a book"));
+    }
+
+    @Test
+    public void getResponse_nullOrBlankCommand_returnsFriendlyError() {
+        Kelore kelore = new Kelore(temporaryDirectory.resolve("tasks.txt"));
+
+        assertEquals("Oops! Please enter a command.", kelore.getResponse(null));
+        assertEquals("Oops! Please enter a command.", kelore.getResponse("   "));
     }
 
     @Test

@@ -12,6 +12,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import kelore.exception.DuplicateTaskException;
+import kelore.exception.InvalidEventPeriodException;
 import kelore.exception.KeloreInputException;
 
 /** Tests the core task creation, mutation, and date-filtering behavior of {@link TaskList}. */
@@ -147,13 +149,42 @@ public class TaskListTest {
     }
 
     @Test
-    public void addEvent_sameStartAndEnd_addsEvent() throws Exception {
+    public void addEvent_sameStartAndEnd_exceptionThrown() {
         TaskList tasks = new TaskList();
 
-        tasks.addEvent("event reminder /from 2/9/2026 0900 /to 2/9/2026 0900");
+        assertThrows(InvalidEventPeriodException.class, () -> tasks.addEvent(
+                "event reminder /from 2/9/2026 0900 /to 2/9/2026 0900"));
+    }
 
-        assertEquals(List.of("E | 0 | reminder | 2026-09-02T09:00 | 2026-09-02T09:00"),
-                tasks.toStorageLines());
+    @Test
+    public void addTask_duplicateNormalizedDetails_exceptionThrown() throws Exception {
+        TaskList tasks = new TaskList();
+        tasks.addTodo("todo Read   a book");
+        tasks.mark(1);
+
+        assertThrows(DuplicateTaskException.class, () -> tasks.addTodo("todo read a book"));
+    }
+
+    @Test
+    public void addDatedTask_sameDescriptionWithDifferentDate_addsBoth() throws Exception {
+        TaskList tasks = new TaskList();
+
+        tasks.addDeadline("deadline submit /by 2/9/2026 1800");
+        tasks.addDeadline("deadline submit /by 3/9/2026 1800");
+
+        assertEquals(2, tasks.toStorageLines().size());
+    }
+
+    @Test
+    public void addDatedTask_duplicateOrEmbeddedParameters_exceptionThrown() {
+        TaskList tasks = new TaskList();
+
+        assertThrows(KeloreInputException.class, () -> tasks.addDeadline(
+                "deadline submit /by 2/9/2026 1800 /by 3/9/2026 1800"));
+        assertThrows(KeloreInputException.class, () -> tasks.addEvent(
+                "event meeting /to 2/9/2026 1000 /from 2/9/2026 0900"));
+        assertThrows(KeloreInputException.class, () -> tasks.addDeadline(
+                "deadline submit /byte 2/9/2026 1800"));
     }
 
     @Test
@@ -294,11 +325,10 @@ public class TaskListTest {
     }
 
     @Test
-    public void findFreeTime_deadlineAndZeroDurationEvent_doNotBlockTime() throws Exception {
+    public void findFreeTime_todoAndDeadline_doNotBlockTime() throws Exception {
         TaskList tasks = new TaskList();
         tasks.addTodo("todo prepare notes");
         tasks.addDeadline("deadline submit /by 21/9/2026 0900");
-        tasks.addEvent("event instant /from 21/9/2026 0800 /to 21/9/2026 0800");
 
         String output = tasks.findFreeTime(
                 "free 10", LocalDateTime.of(2026, 9, 21, 7, 0));
