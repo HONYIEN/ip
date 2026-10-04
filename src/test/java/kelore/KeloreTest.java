@@ -28,7 +28,8 @@ public class KeloreTest {
     public void getWelcomeMessage_newDataFile_returnsGreeting() {
         Kelore kelore = new Kelore(temporaryDirectory.resolve("tasks.txt"));
 
-        assertEquals("Hello! I'm Kelore.\nWhat can I do for you?", kelore.getWelcomeMessage());
+        assertEquals("Hi, I'm Kelore - ready when you are.\n"
+                + "Add a task or type list to get started.", kelore.getWelcomeMessage());
     }
 
     @Test
@@ -38,12 +39,12 @@ public class KeloreTest {
 
         Kelore kelore = new Kelore(dataFile);
 
-        assertEquals("Hello! I'm Kelore.\nWhat can I do for you?"
-                + "\nOops! I could not load your saved tasks.\n"
+        assertEquals("Hi, I'm Kelore - ready when you are.\n"
+                + "Add a task or type list to get started."
+                + "\nI couldn't load your saved tasks, so saving is disabled for this session.\n"
                 + "The data file is corrupted at line 1.", kelore.getWelcomeMessage());
-        assertEquals("    Here are the tasks in your list:" + System.lineSeparator(),
-                kelore.getResponse("list"));
-        assertEquals("Oops! I could not save your tasks.\n"
+        assertEquals("You don't have any tasks yet.", kelore.getResponse("list"));
+        assertEquals("I couldn't save that change. Your task list was left unchanged.\n"
                         + "Saving is disabled because the existing data file could not be loaded.",
                 kelore.getResponse("todo replacement"));
         assertEquals("corrupted record", Files.readString(dataFile));
@@ -63,7 +64,8 @@ public class KeloreTest {
     public void getResponse_invalidCommand_returnsFriendlyError() {
         Kelore kelore = new Kelore(temporaryDirectory.resolve("tasks.txt"));
 
-        assertTrue(kelore.getResponse("dance").startsWith("Oops!"));
+        assertEquals("I don't recognise that command. Check the command and try again.",
+                kelore.getResponse("dance"));
     }
 
     @Test
@@ -78,15 +80,15 @@ public class KeloreTest {
     public void getResponse_nullOrBlankCommand_returnsFriendlyError() {
         Kelore kelore = new Kelore(temporaryDirectory.resolve("tasks.txt"));
 
-        assertEquals("Oops! Please enter a command.", kelore.getResponse(null));
-        assertEquals("Oops! Please enter a command.", kelore.getResponse("   "));
+        assertEquals("Please enter a command.", kelore.getResponse(null));
+        assertEquals("Please enter a command.", kelore.getResponse("   "));
     }
 
     @Test
     public void getResponse_allSupportedCommands_dispatchesAndUpdatesTasks() {
         Kelore kelore = new Kelore(temporaryDirectory.resolve("tasks.txt"));
 
-        assertEquals("Bye. Hope to see you again soon!", kelore.getResponse("bye"));
+        assertEquals("See you next time - your tasks are saved.", kelore.getResponse("bye"));
         assertTrue(kelore.getResponse("todo read a book").contains("[T][ ] read a book"));
         assertTrue(kelore.getResponse("deadline submit report /by 2/9/2026 1800")
                 .contains("[D][ ] submit report"));
@@ -107,11 +109,11 @@ public class KeloreTest {
     public void getResponse_invalidArguments_returnsSpecificFriendlyErrors() {
         Kelore kelore = new Kelore(temporaryDirectory.resolve("tasks.txt"));
 
-        assertEquals("Oops! Please provide a valid task number after the command.",
+        assertEquals("Please provide a valid task number after the command.",
                 kelore.getResponse("mark"));
-        assertEquals("Oops! There is no task with that number.", kelore.getResponse("delete 1"));
-        assertEquals("Oops! The todo description cannot be empty.", kelore.getResponse("todo"));
-        assertEquals("Oops! The search keyword cannot be empty.", kelore.getResponse("find"));
+        assertEquals("There is no task with that number.", kelore.getResponse("delete 1"));
+        assertEquals("The todo description cannot be empty.", kelore.getResponse("todo"));
+        assertEquals("The search keyword cannot be empty.", kelore.getResponse("find"));
     }
 
     @Test
@@ -122,7 +124,8 @@ public class KeloreTest {
 
         String response = kelore.getResponse("todo read a book");
 
-        assertTrue(response.startsWith("Oops! I could not save your tasks.\n"));
+        assertTrue(response.startsWith(
+                "I couldn't save that change. Your task list was left unchanged.\n"));
         assertFalse(kelore.getResponse("list").contains("read a book"));
     }
 
