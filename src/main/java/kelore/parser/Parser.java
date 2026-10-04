@@ -22,7 +22,8 @@ public class Parser {
                 return command;
             }
         }
-        throw new KeloreInputException("I don't recognise that command.");
+        throw new KeloreInputException(
+                "I don't recognise that command. Check the command and try again.");
     }
 
     /**

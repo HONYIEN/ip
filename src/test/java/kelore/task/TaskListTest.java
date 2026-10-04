@@ -45,9 +45,9 @@ public class TaskListTest {
         String response = tasks.addTodo("todo read a book");
 
         assertEquals(List.of("T | 0 | read a book"), tasks.toStorageLines());
-        assertEquals("Got it. I've added this task:" + System.lineSeparator()
+        assertEquals("Added to your list:" + System.lineSeparator()
                 + "      [T][ ] read a book" + System.lineSeparator()
-                + "    Now you have 1 tasks in the list.", response);
+                + "    You now have 1 task.", response);
     }
 
     @Test
@@ -194,12 +194,12 @@ public class TaskListTest {
 
         String markedResponse = tasks.mark(1);
         assertEquals(List.of("T | 1 | read a book"), tasks.toStorageLines());
-        assertEquals("Nice! I've marked this task as done:" + System.lineSeparator()
+        assertEquals("Done - marked as complete:" + System.lineSeparator()
                 + "      [T][X] read a book", markedResponse);
 
         String unmarkedResponse = tasks.unmark(1);
         assertEquals(List.of("T | 0 | read a book"), tasks.toStorageLines());
-        assertEquals("OK, I've marked this task as not done yet:" + System.lineSeparator()
+        assertEquals("Reopened - marked as incomplete:" + System.lineSeparator()
                 + "      [T][ ] read a book", unmarkedResponse);
     }
 
@@ -222,16 +222,15 @@ public class TaskListTest {
         String response = tasks.delete(1);
 
         assertEquals(List.of("T | 0 | second"), tasks.toStorageLines());
-        assertEquals("Noted. I've removed this task:" + System.lineSeparator()
+        assertEquals("Deleted from your list:" + System.lineSeparator()
                 + "      [T][ ] first" + System.lineSeparator()
-                + "    Now you have 1 tasks in the list.", response);
+                + "    1 task remaining.", response);
     }
 
     @Test
     public void display_emptyAndPopulatedList_formatsNumberedTasks() throws Exception {
         TaskList tasks = new TaskList();
-        assertEquals("    Here are the tasks in your list:" + System.lineSeparator(),
-                tasks.display());
+        assertEquals("You don't have any tasks yet.", tasks.display());
 
         tasks.addTodo("todo first");
         tasks.addDeadline("deadline second /by 2/9/2026 1800");
@@ -261,7 +260,8 @@ public class TaskListTest {
     public void displayTasksOn_noMatches_reportsNoMatchingTasks() throws Exception {
         TaskList tasks = new TaskList();
 
-        assertTrue(tasks.displayTasksOn("on 1/1/2026").contains("No matching tasks."));
+        assertTrue(tasks.displayTasksOn("on 1/1/2026")
+                .contains("I couldn't find any matching tasks."));
     }
 
     @Test
@@ -404,7 +404,7 @@ public class TaskListTest {
         TaskList tasks = new TaskList();
         tasks.addTodo("todo read book");
 
-        assertTrue(tasks.find("find pen").contains("No matching tasks."));
+        assertTrue(tasks.find("find pen").contains("I couldn't find any matching tasks."));
     }
 
     @Test

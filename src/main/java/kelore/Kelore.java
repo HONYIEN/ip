@@ -13,7 +13,8 @@ import kelore.task.TaskList;
 /** Processes commands for the Kelore task-tracking chatbot. */
 public class Kelore {
     private static final Path DATA_FILE_PATH = Path.of("data", "kelore.txt");
-    private static final String WELCOME_MESSAGE = "Hello! I'm Kelore.\nWhat can I do for you?";
+    private static final String WELCOME_MESSAGE = "Hi, I'm Kelore - ready when you are.\n"
+            + "Add a task or type list to get started.";
 
     private final Parser parser = new Parser();
     private final Clock clock;
@@ -54,7 +55,8 @@ public class Kelore {
             loadedTasks = storage.load();
         } catch (StorageException e) {
             loadedTasks = new TaskList();
-            loadingError = "\nOops! I could not load your saved tasks.\n" + e.getMessage();
+            loadingError = "\nI couldn't load your saved tasks, so saving is disabled "
+                    + "for this session.\n" + e.getMessage();
             canSave = false;
         }
         assert loadedTasks != null : "Loading must produce a task list";
@@ -93,7 +95,7 @@ public class Kelore {
             String normalizedInput = parser.normalizeInput(input);
             switch (parser.parseCommand(normalizedInput)) {
                 case BYE:
-                    return Response.success("Bye. Hope to see you again soon!");
+                    return Response.success("See you next time - your tasks are saved.");
                 case LIST:
                     return Response.success(taskList.display());
                 case MARK:
@@ -128,9 +130,10 @@ public class Kelore {
                     throw new AssertionError("Unhandled command");
             }
         } catch (KeloreInputException e) {
-            return Response.error("Oops! " + e.getMessage());
+            return Response.error(e.getMessage());
         } catch (StorageException e) {
-            return Response.error("Oops! I could not save your tasks.\n" + e.getMessage());
+            return Response.error("I couldn't save that change. Your task list was left "
+                    + "unchanged.\n" + e.getMessage());
         }
     }
 

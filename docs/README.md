@@ -2,6 +2,8 @@
 
 **Kelore** is a desktop task-tracking chatbot that helps you record tasks, track
 their completion, view your schedule, search for tasks, and find free time.
+Its calm teal interface keeps commands and responses visually distinct, while
+clear confirmations and actionable error messages show what happened.
 
 ![Kelore's graphical user interface](Ui.png)
 
@@ -43,6 +45,8 @@ on 25 September 2026.
 ## Viewing tasks
 
 Use `list` to display every saved task and its number.
+
+If your list is empty, Kelore responds with `You don't have any tasks yet.`
 
 Example: `list`
 

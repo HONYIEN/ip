@@ -423,9 +423,9 @@ public class TaskList {
         int previousSize = tasks.size();
         tasks.add(task);
         assert tasks.size() == previousSize + 1 : "Adding a task must increase the task count";
-        return "Got it. I've added this task:" + System.lineSeparator()
+        return "Added to your list:" + System.lineSeparator()
                 + INDENTATION + "  " + task + System.lineSeparator()
-                + INDENTATION + "Now you have " + tasks.size() + " tasks in the list.";
+                + INDENTATION + "You now have " + formatTaskCount(tasks.size()) + ".";
     }
 
     /**
@@ -438,7 +438,7 @@ public class TaskList {
     public String mark(int taskNumber) throws KeloreInputException {
         Task task = getTask(taskNumber);
         task.markAsDone();
-        return "Nice! I've marked this task as done:" + System.lineSeparator()
+        return "Done - marked as complete:" + System.lineSeparator()
                 + INDENTATION + "  " + task;
     }
 
@@ -452,7 +452,7 @@ public class TaskList {
     public String unmark(int taskNumber) throws KeloreInputException {
         Task task = getTask(taskNumber);
         task.markAsNotDone();
-        return "OK, I've marked this task as not done yet:" + System.lineSeparator()
+        return "Reopened - marked as incomplete:" + System.lineSeparator()
                 + INDENTATION + "  " + task;
     }
 
@@ -466,9 +466,9 @@ public class TaskList {
     public String delete(int taskNumber) throws KeloreInputException {
         getTask(taskNumber);
         Task removedTask = tasks.remove(taskNumber - 1);
-        return "Noted. I've removed this task:" + System.lineSeparator()
+        return "Deleted from your list:" + System.lineSeparator()
                 + INDENTATION + "  " + removedTask + System.lineSeparator()
-                + INDENTATION + "Now you have " + tasks.size() + " tasks in the list.";
+                + INDENTATION + formatTaskCount(tasks.size()) + " remaining.";
     }
 
     /**
@@ -493,6 +493,9 @@ public class TaskList {
      * @return Numbered task list.
      */
     public String display() {
+        if (tasks.isEmpty()) {
+            return "You don't have any tasks yet.";
+        }
         return formatNumberedTasks("Here are the tasks in your list:", tasks);
     }
 
@@ -506,9 +509,15 @@ public class TaskList {
     private String formatMatchingTasks(String heading, List<Task> matchingTasks) {
         String output = formatNumberedTasks(heading, matchingTasks);
         if (matchingTasks.isEmpty()) {
-            output += INDENTATION + "No matching tasks." + System.lineSeparator();
+            output += INDENTATION + "I couldn't find any matching tasks."
+                    + System.lineSeparator();
         }
         return output;
+    }
+
+    /** Returns a task count with the correct singular or plural noun. */
+    private String formatTaskCount(int taskCount) {
+        return taskCount + (taskCount == 1 ? " task" : " tasks");
     }
 
     /**
