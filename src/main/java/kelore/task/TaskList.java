@@ -11,8 +11,12 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import kelore.exception.DuplicateTaskException;
+import kelore.exception.InvalidEventPeriodException;
 import kelore.exception.KeloreInputException;
 
 /** Stores and manages the user's tasks. */
@@ -97,10 +101,7 @@ public class TaskList {
      */
     public String addDeadline(String input) throws KeloreInputException {
         String details = input.substring("deadline".length()).trim();
-        int separatorIndex = details.indexOf("/by");
-        if (separatorIndex < 0) {
-            throw new KeloreInputException("Please specify the deadline using /by.");
-        }
+        int separatorIndex = findSingleParameter(details, "/by");
         String description = details.substring(0, separatorIndex).trim();
         String byText = details.substring(separatorIndex + "/by".length()).trim();
         if (description.isEmpty()) {
@@ -122,13 +123,10 @@ public class TaskList {
      */
     public String addEvent(String input) throws KeloreInputException {
         String details = input.substring("event".length()).trim();
-        int fromIndex = details.indexOf("/from");
-        if (fromIndex < 0) {
-            throw new KeloreInputException("Please specify the event start using /from.");
-        }
-        int toIndex = details.indexOf("/to", fromIndex + "/from".length());
-        if (toIndex < 0) {
-            throw new KeloreInputException("Please specify the event end using /to.");
+        int fromIndex = findSingleParameter(details, "/from");
+        int toIndex = findSingleParameter(details, "/to");
+        if (toIndex < fromIndex) {
+            throw new KeloreInputException("Please specify /from before /to.");
         }
         String description = details.substring(0, fromIndex).trim();
         String fromText = details.substring(fromIndex + "/from".length(), toIndex).trim();
@@ -145,11 +143,25 @@ public class TaskList {
         ensureFieldsCanBeStored(description);
         LocalDateTime from = parseDateTime(fromText);
         LocalDateTime to = parseDateTime(toText);
-        if (to.isBefore(from)) {
-            throw new KeloreInputException(
-                    "The event end date/time cannot be before its start date/time.");
+        if (!to.isAfter(from)) {
+            throw new InvalidEventPeriodException();
         }
         return addTask(new Event(description, from, to));
+    }
+
+    private int findSingleParameter(String details, String parameter)
+            throws KeloreInputException {
+        Pattern parameterPattern = Pattern.compile(
+                "(?<!\\S)" + Pattern.quote(parameter) + "(?!\\S)");
+        Matcher matcher = parameterPattern.matcher(details);
+        if (!matcher.find()) {
+            throw new KeloreInputException("Please specify " + parameter + ".");
+        }
+        int parameterIndex = matcher.start();
+        if (matcher.find()) {
+            throw new KeloreInputException("Please specify " + parameter + " at most once.");
+        }
+        return parameterIndex;
     }
 
     /**
@@ -231,11 +243,7 @@ public class TaskList {
     private FreeTimeQuery parseFreeTimeQuery(String input, LocalDate today)
             throws KeloreInputException {
         String details = input.substring("free".length()).trim();
-        int fromIndex = details.indexOf("/from");
-        if (fromIndex >= 0
-                && details.indexOf("/from", fromIndex + "/from".length()) >= 0) {
-            throw new KeloreInputException("Please specify /from at most once.");
-        }
+        int fromIndex = findOptionalSingleParameter(details, "/from");
 
         String hoursText = fromIndex < 0 ? details : details.substring(0, fromIndex).trim();
         int hours;
@@ -264,6 +272,21 @@ public class TaskList {
             }
         }
         return new FreeTimeQuery(hours, startDate);
+    }
+
+    private int findOptionalSingleParameter(String details, String parameter)
+            throws KeloreInputException {
+        Pattern parameterPattern = Pattern.compile(
+                "(?<!\\S)" + Pattern.quote(parameter) + "(?!\\S)");
+        Matcher matcher = parameterPattern.matcher(details);
+        if (!matcher.find()) {
+            return -1;
+        }
+        int parameterIndex = matcher.start();
+        if (matcher.find()) {
+            throw new KeloreInputException("Please specify " + parameter + " at most once.");
+        }
+        return parameterIndex;
     }
 
     private LocalDateTime roundUpToMinute(LocalDateTime dateTime) {
@@ -373,12 +396,15 @@ public class TaskList {
      * Ensures that task fields do not contain the storage delimiter.
      *
      * @param fields Task fields to validate.
-     * @throws KeloreInputException If a field contains the storage delimiter.
+     * @throws KeloreInputException If a field contains the storage delimiter or a control character.
      */
     private void ensureFieldsCanBeStored(String... fields) throws KeloreInputException {
         for (String field : fields) {
             if (field.contains(" | ")) {
                 throw new KeloreInputException("Task details cannot contain the text ' | '.");
+            }
+            if (field.chars().anyMatch(Character::isISOControl)) {
+                throw new KeloreInputException("Task details cannot contain control characters.");
             }
         }
     }
@@ -389,8 +415,11 @@ public class TaskList {
      * @param task Task to add.
      * @return Displayable confirmation of the added task and new task count.
      */
-    private String addTask(Task task) {
+    private String addTask(Task task) throws DuplicateTaskException {
         assert task != null : "The task to add must not be null";
+        if (tasks.stream().anyMatch(existingTask -> existingTask.hasSameDetails(task))) {
+            throw new DuplicateTaskException();
+        }
         int previousSize = tasks.size();
         tasks.add(task);
         assert tasks.size() == previousSize + 1 : "Adding a task must increase the task count";

@@ -92,6 +92,23 @@ public class Task {
                         levenshteinDistance(word, normalizedKeyword) <= allowedDistance);
     }
 
+    /**
+     * Returns whether another task has the same type and user-provided details.
+     * Completion status and insignificant description whitespace are ignored.
+     *
+     * @param other Task to compare.
+     * @return True if both tasks represent the same task details.
+     */
+    public boolean hasSameDetails(Task other) {
+        return other != null
+                && getClass().equals(other.getClass())
+                && normalizeDescription(description).equals(normalizeDescription(other.description));
+    }
+
+    private String normalizeDescription(String value) {
+        return value.strip().replaceAll("\\s+", " ").toLowerCase(Locale.ENGLISH);
+    }
+
     private int getAllowedDistance(int keywordLength) {
         if (keywordLength <= SHORT_KEYWORD_MAX_LENGTH) {
             return 0;

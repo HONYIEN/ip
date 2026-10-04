@@ -11,6 +11,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import kelore.exception.CorruptedDataException;
 import kelore.task.TaskList;
 
 /** Tests persistence and validation of Kelore's task data file. */
@@ -89,11 +90,13 @@ public class StorageTest {
                 "E | 0 | description | invalid-date | 2026-09-03T10:00",
                 "E | 0 | description | 2026-09-03T10:00 | invalid-date",
                 "E | 0 | description | 2026-09-04T10:00 | 2026-09-03T10:00",
+                "E | 0 | description | 2026-09-03T10:00 | 2026-09-03T10:00",
                 "E | 0 | description | 2026-09-03T10:00",
                 "X | 0 | description",
                 "T | maybe | description",
                 "T | 0 | ",
-                "D | 0 |     | 2026-09-02T18:00");
+                "D | 0 |     | 2026-09-02T18:00",
+                "T | 0 | invalid\tdescription");
 
         for (int i = 0; i < corruptedRecords.size(); i++) {
             Path file = temporaryDirectory.resolve("corrupted-" + i + ".txt");
@@ -103,6 +106,19 @@ public class StorageTest {
                     IOException.class, () -> new Storage(file).load());
             assertEquals("The data file is corrupted at line 2.", exception.getMessage());
         }
+    }
+
+    @Test
+    public void load_duplicateTaskDetails_throwsCorruptedDataException() throws Exception {
+        Path file = temporaryDirectory.resolve("duplicates.txt");
+        Files.write(file, List.of(
+                "T | 0 | Read   book",
+                "T | 1 | read book"));
+
+        CorruptedDataException exception = assertThrows(
+                CorruptedDataException.class, () -> new Storage(file).load());
+
+        assertEquals("The data file is corrupted at line 2.", exception.getMessage());
     }
 
     @Test

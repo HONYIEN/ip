@@ -1,13 +1,17 @@
 package kelore.storage;
 
 import java.io.IOException;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 
+import kelore.exception.CorruptedDataException;
+import kelore.exception.StorageException;
 import kelore.task.Deadline;
 import kelore.task.Event;
 import kelore.task.Task;
@@ -33,17 +37,26 @@ public class Storage {
      * Returns tasks loaded from the data file, or an empty list if the file is absent.
      *
      * @return Tasks represented by the data file.
-     * @throws IOException If the file cannot be read or contains corrupted data.
+     * @throws StorageException If the file cannot be read or contains corrupted data.
      */
-    public TaskList load() throws IOException {
-        if (!Files.exists(filePath)) {
+    public TaskList load() throws StorageException {
+        if (Files.notExists(filePath)) {
             return new TaskList();
         }
         ArrayList<Task> tasks = new ArrayList<>();
-        List<String> lines = Files.readAllLines(filePath);
+        List<String> lines;
+        try {
+            lines = Files.readAllLines(filePath);
+        } catch (IOException e) {
+            throw new StorageException("The data file could not be read.", e);
+        }
         for (int i = 0; i < lines.size(); i++) {
             if (!lines.get(i).isBlank()) {
-                tasks.add(parseTask(lines.get(i), i + 1));
+                Task task = parseTask(lines.get(i), i + 1);
+                if (tasks.stream().anyMatch(existingTask -> existingTask.hasSameDetails(task))) {
+                    throw corruptedFileError(i + 1);
+                }
+                tasks.add(task);
             }
         }
         return new TaskList(tasks);
@@ -53,15 +66,44 @@ public class Storage {
      * Saves all tasks to the data file, creating its parent directory when needed.
      *
      * @param taskList Tasks to save.
-     * @throws IOException If the data file cannot be written.
+     * @throws StorageException If the data file cannot be written.
      */
-    public void save(TaskList taskList) throws IOException {
+    public void save(TaskList taskList) throws StorageException {
         assert taskList != null : "The task list to save must not be null";
-        Path parentDirectory = filePath.getParent();
-        if (parentDirectory != null) {
+        Path absoluteFilePath = filePath.toAbsolutePath();
+        Path parentDirectory = absoluteFilePath.getParent();
+        Path temporaryFile = null;
+        try {
             Files.createDirectories(parentDirectory);
+            temporaryFile = Files.createTempFile(parentDirectory, ".kelore-", ".tmp");
+            Files.write(temporaryFile, taskList.toStorageLines());
+            moveIntoPlace(temporaryFile, absoluteFilePath);
+            temporaryFile = null;
+        } catch (IOException e) {
+            throw new StorageException("The data file could not be saved.", e);
+        } finally {
+            deleteTemporaryFile(temporaryFile);
         }
-        Files.write(filePath, taskList.toStorageLines());
+    }
+
+    private void moveIntoPlace(Path temporaryFile, Path destination) throws IOException {
+        try {
+            Files.move(temporaryFile, destination,
+                    StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+        } catch (AtomicMoveNotSupportedException e) {
+            Files.move(temporaryFile, destination, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    private void deleteTemporaryFile(Path temporaryFile) {
+        if (temporaryFile == null) {
+            return;
+        }
+        try {
+            Files.deleteIfExists(temporaryFile);
+        } catch (IOException e) {
+            // The original save error is more useful than a temporary-file cleanup error.
+        }
     }
 
     /**
@@ -70,14 +112,15 @@ public class Storage {
      * @param line Record to parse.
      * @param lineNumber One-based line number used in error messages.
      * @return Parsed task.
-     * @throws IOException If the record is malformed.
+     * @throws CorruptedDataException If the record is malformed.
      */
-    private Task parseTask(String line, int lineNumber) throws IOException {
+    private Task parseTask(String line, int lineNumber) throws CorruptedDataException {
         String[] fields = line.split(" \\| ", -1);
         if (fields.length < 3) {
             throw corruptedFileError(lineNumber);
         }
-        if (fields[2].isBlank()) {
+        if (fields[2].isBlank()
+                || fields[2].chars().anyMatch(Character::isISOControl)) {
             throw corruptedFileError(lineNumber);
         }
         Task task;
@@ -94,7 +137,7 @@ public class Storage {
                 requireFieldCount(fields, 5, lineNumber);
                 LocalDateTime from = parseDateTime(fields[3], lineNumber);
                 LocalDateTime to = parseDateTime(fields[4], lineNumber);
-                if (to.isBefore(from)) {
+                if (!to.isAfter(from)) {
                     throw corruptedFileError(lineNumber);
                 }
                 task = new Event(fields[2], from, to);
@@ -117,9 +160,10 @@ public class Storage {
      * @param value Stored date and time to parse.
      * @param lineNumber One-based line number used in error messages.
      * @return Parsed date and time.
-     * @throws IOException If the value is not a valid date and time.
+     * @throws CorruptedDataException If the value is not a valid date and time.
      */
-    private LocalDateTime parseDateTime(String value, int lineNumber) throws IOException {
+    private LocalDateTime parseDateTime(String value, int lineNumber)
+            throws CorruptedDataException {
         try {
             return LocalDateTime.parse(value);
         } catch (DateTimeParseException e) {
@@ -133,10 +177,10 @@ public class Storage {
      * @param fields Fields in the stored record.
      * @param expected Required number of fields.
      * @param lineNumber One-based line number used in error messages.
-     * @throws IOException If the field count differs from the expected count.
+     * @throws CorruptedDataException If the field count differs from the expected count.
      */
     private void requireFieldCount(String[] fields, int expected, int lineNumber)
-            throws IOException {
+            throws CorruptedDataException {
         if (fields.length != expected) {
             throw corruptedFileError(lineNumber);
         }
@@ -148,8 +192,8 @@ public class Storage {
      * @param lineNumber One-based number of the corrupted line.
      * @return Exception describing the corrupted line.
      */
-    private IOException corruptedFileError(int lineNumber) {
-        return new IOException("The data file is corrupted at line " + lineNumber + ".");
+    private CorruptedDataException corruptedFileError(int lineNumber) {
+        return new CorruptedDataException(lineNumber);
     }
 
     /**

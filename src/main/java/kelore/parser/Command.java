@@ -47,6 +47,9 @@ public enum Command {
      */
     boolean matches(String input) {
         return input.equals(commandWord)
-                || acceptsArguments && input.startsWith(commandWord + " ");
+                || acceptsArguments
+                && input.startsWith(commandWord)
+                && input.length() > commandWord.length()
+                && Character.isWhitespace(input.charAt(commandWord.length()));
     }
 }

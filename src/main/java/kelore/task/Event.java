@@ -27,7 +27,7 @@ public class Event extends Task {
         super(description);
         assert from != null : "An event must have a start date and time";
         assert to != null : "An event must have an end date and time";
-        assert !to.isBefore(from) : "An event must not end before it starts";
+        assert to.isAfter(from) : "An event must end after it starts";
         this.from = from;
         this.to = to;
     }
@@ -57,6 +57,14 @@ public class Event extends Task {
         LocalDate startDate = from.toLocalDate();
         LocalDate endDate = to.toLocalDate();
         return !date.isBefore(startDate) && !date.isAfter(endDate);
+    }
+
+    /** Returns whether another event has the same description, start, and end times. */
+    @Override
+    public boolean hasSameDetails(Task other) {
+        return super.hasSameDetails(other)
+                && from.equals(((Event) other).from)
+                && to.equals(((Event) other).to);
     }
 
     /** Returns an independent copy of this event. */

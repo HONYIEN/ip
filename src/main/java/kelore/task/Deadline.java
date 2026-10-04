@@ -49,6 +49,13 @@ public class Deadline extends Task {
         return by.toLocalDate().equals(date);
     }
 
+    /** Returns whether another deadline has the same description and due time. */
+    @Override
+    public boolean hasSameDetails(Task other) {
+        return super.hasSameDetails(other)
+                && by.equals(((Deadline) other).by);
+    }
+
     /** Returns an independent copy of this deadline. */
     @Override
     Deadline copy() {
